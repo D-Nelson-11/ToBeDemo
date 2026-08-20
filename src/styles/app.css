@@ -1,0 +1,402 @@
+@import 'tailwindcss';
+
+/* ============================================================================
+   Tokens — Portal de Abastecimiento
+   El cromo (head y barra de pasos) usa los azules del portal actual; el navy de
+   marca #003049 vive en las tablas, y el rojo #e30018 solo marca lo crítico.
+   ========================================================================== */
+@theme {
+  --color-navy-950: #001c2c;
+  --color-navy-900: #002338;
+  --color-navy-800: #003049; /* primario de marca */
+  --color-navy-700: #0a4260;
+  --color-navy-600: #17587a;
+  --color-navy-400: #5b8aa5;
+  --color-navy-200: #b9d0dd;
+  --color-navy-100: #dbe8ef;
+  --color-navy-50: #eef4f8;
+
+  --color-rojo-700: #b3001a;
+  --color-rojo-600: #e30018; /* secundario de marca — solo crítico */
+  --color-rojo-100: #fbd7db;
+  --color-rojo-50: #fdeef0;
+
+  --color-ambar-700: #8a5300;
+  --color-ambar-600: #b87400;
+  --color-ambar-500: #e09000;
+  --color-ambar-100: #f8e6c4;
+  --color-ambar-50: #fdf5e7;
+
+  --color-teal-700: #0a6355;
+  --color-teal-600: #0d8271;
+  --color-teal-100: #c9e9e3;
+  --color-teal-50: #e8f6f3;
+
+  --color-ink: #0b2536;
+  --color-ink-2: #47616f;
+  --color-ink-3: #758a97;
+  --color-ink-4: #9db0bb;
+
+  /* Cromo del portal actual: la banda del head y la de navegación van con
+     los azules que ya usa el sistema. El navy de marca queda para las tablas. */
+  --color-head: #4d6fa3;
+  --color-nav: #5b8bd4;
+  --color-nav-hover: #4a78c0;
+
+  --color-canvas: #eef1f5;
+  --color-fila-alt: #f4f7fb;   /* zebra, como en el portal actual */
+  --color-fila-hover: #e8f0fb;
+  --color-surface: #ffffff;
+  --color-surface-2: #f7fafb;
+  --color-surface-3: #eef3f6;
+  --color-inset: #f4f8fa;
+
+  --color-line: #ccd7e0;
+  --color-line-soft: #dde5ec;
+  --color-line-strong: #b6c5d2;
+
+  --font-sans: Arial, Helvetica, sans-serif;
+
+  --text-3xs: 9.5px;
+  --text-2xs: 10.5px;
+  --text-xs: 11.5px;
+  --text-sm: 12.5px;
+  --text-base: 13px;
+  --text-lg: 15px;
+  --text-xl: 18px;
+  --text-2xl: 22px;
+  --text-3xl: 27px;
+
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 11px;
+
+  /* Ancho útil del contenido: el resto es aire a los lados. */
+  --container-app: 1560px;
+  /* Alto máximo de una tabla antes de que scrollee ella sola (~9 filas). */
+  --alto-tabla: 500px;
+
+  --ease-out-soft: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply m-0 bg-canvas text-ink font-sans text-base leading-[1.45];
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  p {
+    @apply m-0;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+  button {
+    @apply cursor-pointer;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-1 outline-navy-600 rounded-xs;
+  }
+  ::selection {
+    @apply bg-navy-100;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 48, 73, 0.22) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: rgba(0, 48, 73, 0.2);
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 48, 73, 0.34);
+    background-clip: content-box;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ============================================================================
+   Piezas que se repiten. Se extraen aquí para que el JSX no cargue con
+   veinte utilidades por elemento.
+   ========================================================================== */
+@layer components {
+  /* --- caja de contenido: centrada y con aire a los lados, como un container --- */
+  .contenedor {
+    @apply mx-auto w-full max-w-[var(--container-app)] px-6;
+  }
+
+  /* --- números: nunca deben mover el layout --- */
+  .num {
+    @apply text-sm;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* --- etiqueta de campo / encabezado menor --- */
+  .lbl {
+    @apply flex items-baseline gap-1.5 text-sm font-bold text-ink-2;
+  }
+
+  /* --- botones --- */
+  .btn {
+    @apply inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-sm border
+      border-transparent px-[13px] text-sm font-semibold transition-[background-color,border-color,color,transform]
+      duration-100 ease-[var(--ease-out-soft)] active:not-disabled:scale-[0.975]
+      disabled:cursor-not-allowed disabled:opacity-45;
+  }
+  .btn > svg {
+    @apply -mt-px shrink-0;
+  }
+  .btn-sm {
+    @apply h-[26px] gap-1 px-[9px] text-xs;
+  }
+  .btn-primary {
+    @apply bg-navy-800 text-white hover:not-disabled:bg-navy-700;
+  }
+  .btn-sec {
+    @apply border-line-strong bg-surface text-ink hover:not-disabled:border-navy-400 hover:not-disabled:bg-surface-2;
+  }
+  .btn-quiet {
+    @apply text-ink-2 hover:not-disabled:bg-navy-800/6 hover:not-disabled:text-ink;
+  }
+  .btn-danger {
+    @apply bg-rojo-600 text-white hover:not-disabled:bg-rojo-700;
+  }
+  .btn-link {
+    @apply inline-flex h-auto items-center gap-1 rounded-xs p-0 text-sm font-semibold text-navy-600
+      hover:text-navy-800 hover:underline underline-offset-[3px];
+  }
+
+  /* --- controles de formulario --- */
+  .inp {
+    @apply h-8 w-full rounded-sm border border-line bg-inset px-2.5 text-base text-ink
+      transition-[border-color,background-color,box-shadow] duration-100 ease-[var(--ease-out-soft)]
+      placeholder:text-ink-4 hover:not-disabled:not-focus:border-line-strong
+      focus:border-navy-600 focus:bg-surface focus:outline-none focus:ring-3 focus:ring-navy-600/25
+      disabled:cursor-not-allowed disabled:bg-surface-3 disabled:text-ink-3;
+  }
+  .inp-area {
+    @apply h-auto min-h-[68px] resize-y py-2 leading-normal;
+  }
+  .inp-date {
+    @apply text-sm;
+    font-variant-numeric: tabular-nums;
+  }
+  .inp-date::-webkit-calendar-picker-indicator {
+    @apply cursor-pointer opacity-45 grayscale hover:opacity-90;
+  }
+  .inp-sel {
+    @apply cursor-pointer appearance-none pr-7;
+  }
+
+  /* --- celda editable dentro de una tabla: parece texto hasta que la tocas --- */
+  .cellinp {
+    @apply h-[26px] w-full rounded-xs border border-transparent bg-transparent px-[7px] text-sm text-ink
+      transition-[border-color,background-color,box-shadow] duration-100 ease-[var(--ease-out-soft)]
+      hover:not-focus:border-line hover:not-focus:bg-inset
+      focus:border-navy-600 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-navy-600/25;
+  }
+  .cellinp-num {
+    @apply text-right text-sm;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* --- tabla de trabajo: cabecera navy sólida y zebra, como el portal actual --- */
+  .tbl {
+    @apply w-full border-separate border-spacing-0 text-base;
+  }
+  .tbl thead th {
+    @apply sticky top-0 z-[3] h-[34px] whitespace-nowrap bg-navy-800 px-2.5
+      text-left text-sm font-semibold text-white select-none;
+  }
+  /* segunda fila de la cabecera: filtros por columna, como en el portal actual */
+  .tbl thead tr.filtros th {
+    @apply top-[34px] h-auto border-b-2 border-line bg-surface px-1.5 py-1;
+  }
+  .tbl tbody td {
+    @apply h-9 whitespace-nowrap border-b border-line-soft px-2.5 align-middle text-ink-2;
+  }
+  .tbl tbody tr:nth-child(even) td {
+    @apply bg-fila-alt;
+  }
+  .tbl tbody tr {
+    @apply transition-colors duration-75;
+  }
+  .tbl tbody tr:hover td {
+    @apply bg-fila-hover;
+  }
+  .tbl tbody tr:last-child td {
+    @apply border-b-0;
+  }
+  .tbl tfoot td {
+    @apply h-[34px] whitespace-nowrap border-t border-line bg-surface-2 px-2.5 text-sm font-semibold text-ink-2;
+  }
+
+  .th-sort {
+    @apply cursor-pointer transition-colors hover:text-navy-200;
+  }
+
+  /* dato principal de la fila: el único con peso completo */
+  .cell-key {
+    @apply text-base font-semibold text-ink;
+    font-variant-numeric: tabular-nums;
+  }
+  .cell-num {
+    @apply text-right text-sm;
+    font-variant-numeric: tabular-nums;
+  }
+  .cell-strong {
+    @apply font-medium text-ink;
+  }
+  .cell-cut {
+    @apply max-w-px overflow-hidden text-ellipsis;
+  }
+
+  /* fila inactiva: presente pero apagada, no escondida */
+  .tbl tbody tr.row-off td {
+    @apply text-ink-4;
+    background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(0, 48, 73, 0.022) 6px 12px);
+  }
+  .tbl tbody tr.row-off .cell-key,
+  .tbl tbody tr.row-off .cell-strong {
+    @apply font-medium text-ink-3;
+  }
+
+  /* lomo de estado: un borde izquierdo en la primera celda. Va como borde y no
+     como <td> de 3px porque el borde sí se estira con la altura real de la fila. */
+  .tbl tbody td:first-child {
+    border-left: 3px solid var(--spine, transparent);
+  }
+  .tbl thead th:first-child {
+    border-left: 3px solid transparent;
+  }
+
+  /* --- botón de icono en fila --- */
+  .ico {
+    @apply inline-flex h-[26px] w-[26px] items-center justify-center rounded-xs border-0 bg-transparent
+      text-ink-3 transition-[background-color,color,transform] duration-100 ease-[var(--ease-out-soft)]
+      hover:not-disabled:bg-navy-800/8 hover:not-disabled:text-navy-800
+      active:not-disabled:scale-90 disabled:cursor-not-allowed disabled:opacity-30;
+  }
+  .ico-rojo {
+    @apply hover:not-disabled:bg-rojo-50 hover:not-disabled:text-rojo-700;
+  }
+  .ico-ambar {
+    @apply hover:not-disabled:bg-ambar-50 hover:not-disabled:text-ambar-700;
+  }
+  .ico-on {
+    @apply text-ambar-600;
+  }
+
+  /* --- checkbox propio --- */
+  .chk {
+    @apply relative grid h-[15px] w-[15px] cursor-pointer appearance-none place-content-center
+      rounded-xs border-[1.5px] border-line-strong bg-surface transition-[background-color,border-color]
+      duration-100 hover:border-navy-600
+      checked:border-navy-700 checked:bg-navy-700 indeterminate:border-navy-700 indeterminate:bg-navy-700;
+  }
+  .chk::after {
+    content: '';
+    @apply h-2 w-2 scale-0 bg-white transition-transform duration-100 ease-[var(--ease-out-soft)];
+    clip-path: polygon(14% 44%, 0 60%, 39% 100%, 100% 20%, 84% 6%, 39% 68%);
+  }
+  .chk:checked::after {
+    @apply scale-100;
+  }
+  .chk:indeterminate::after {
+    @apply h-0.5 w-2 scale-100 rounded-[1px];
+    clip-path: none;
+  }
+  /* área de clic de 31px sin agrandar el control visible */
+  .chk::before {
+    content: '';
+    @apply absolute -inset-2;
+  }
+
+  /* --- segmentos (filtros, modos) --- */
+  .segbar {
+    @apply inline-flex items-center gap-0.5 rounded-md border border-line bg-surface p-0.5;
+  }
+  .seg {
+    @apply inline-flex h-[26px] items-center gap-[7px] whitespace-nowrap rounded-sm border-0 bg-transparent
+      px-2.5 text-sm font-medium text-ink-2 transition-colors duration-100
+      hover:bg-navy-800/6 hover:text-ink;
+  }
+  .seg-on {
+    @apply bg-navy-800 font-semibold text-white hover:bg-navy-800 hover:text-white;
+  }
+
+  /* --- panel: superficie con borde, sin sombra --- */
+  .panel {
+    @apply overflow-hidden rounded-sm border border-line bg-surface shadow-[0_1px_3px_rgba(23,58,107,0.1)];
+  }
+
+  /* --- la tabla scrollea dentro de su caja; así la cabecera se queda fija.
+     Debe ir después de .panel para ganarle a su overflow-hidden. --- */
+  .tabla-scroll {
+    @apply max-h-[var(--alto-tabla)] overflow-auto;
+  }
+  .panel-head {
+    @apply flex items-center gap-3 border-b border-line bg-surface-2 px-4 py-2.5;
+  }
+  .panel-title {
+    @apply flex items-center gap-[7px] whitespace-nowrap text-base font-bold text-navy-800;
+  }
+  .panel-title > svg {
+    @apply text-navy-400;
+  }
+
+  /* --- radio propio --- */
+  .rad {
+    @apply relative h-[15px] w-[15px] shrink-0 rounded-full border-[1.5px] border-line-strong bg-surface
+      transition-[border-color,border-width] duration-100;
+  }
+  .rad-on {
+    @apply border-[4.5px] border-navy-800;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+}

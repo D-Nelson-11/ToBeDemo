@@ -1,0 +1,8 @@
+node_modules
+dist
+.DS_Store
+*.local
+.vite
+
+# HTML/capturas del sistema actual: quedan solo en local
+_referencias/
