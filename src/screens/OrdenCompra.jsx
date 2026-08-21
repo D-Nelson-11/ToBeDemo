@@ -22,7 +22,7 @@ const CONTEXTO = [
   ['Organización', 'DINANT'],
   ['Centro', 'CD DINANT SNACK'],
   ['Área de compra', 'Materia Prima'],
-  ['Resp. compra', 'David Nelson'],
+  ['Resp. compra', 'User'],
 ]
 
 // Lo que "extrae" el lector de PDF al procesar la orden del proveedor.
@@ -112,7 +112,7 @@ export default function OrdenCompra() {
     crearOc({
       id: form.documento,
       proveedor: form.proveedor,
-      resp: 'David Nelson',
+      resp: 'User',
       organizacion: 'CORPORACION DINANT S.A',
       centro: 'CD DINANT SNACK',
       fechaDoc: form.fechaDoc || toISO(new Date()),

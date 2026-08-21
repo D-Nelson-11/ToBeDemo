@@ -151,26 +151,28 @@ export const ORDENES_INICIALES = [
     // de seguimiento (retrasado, por vencer y en tiempo).
     despachos: [
       {
-        id: 'D-01',
+        id: 'DPE1',
         material: '1002104',
         cantidad: 20000,
         salida: '2026-08-14',
+        salidaPlan: '2026-08-11',
         ruta: 'longbeach',
         aduana: [true, false, false, false],
         logistica: [true, true, false, false],
       },
       {
-        id: 'D-02',
+        id: 'DPE2',
         material: '1002104',
         cantidad: 20000,
         salida: '2026-08-24',
+        salidaPlan: '2026-08-22',
         ruta: 'longbeach',
         aduana: [true, true, true, true],
         logistica: [true, true, true, false],
       },
       {
         // Reembarcado por otra ruta: no se puede gestionar junto con D-01 y D-02.
-        id: 'D-03',
+        id: 'DPE3',
         material: '1002104',
         cantidad: 20000,
         salida: '2026-09-05',
@@ -223,8 +225,8 @@ export const ORDENES_INICIALES = [
     instrucciones: '',
     materiales: [m('1004001', 'Maíz Amarillo', 'Granos', 180000, 'KG', 0.318)],
     despachos: [
-      { id: 'D-01', material: '1004001', cantidad: 90000, salida: '2026-04-20', ruta: 'houston', aduana: [true, true, true, true], logistica: [true, true, true, true] },
-      { id: 'D-02', material: '1004001', cantidad: 90000, salida: '2026-05-06', ruta: 'houston', aduana: [true, true, true, true], logistica: [true, true, true, true] },
+      { id: 'DPE4', material: '1004001', cantidad: 90000, salida: '2026-04-20', ruta: 'houston', aduana: [true, true, true, true], logistica: [true, true, true, true] },
+      { id: 'DPE5', material: '1004001', cantidad: 90000, salida: '2026-05-06', ruta: 'houston', aduana: [true, true, true, true], logistica: [true, true, true, true] },
     ],
   },
   {
@@ -270,7 +272,7 @@ export const ORDENES_INICIALES = [
     instrucciones: '',
     materiales: [m('1005512', 'Yuca Fresca Industrial', 'Papa y tubérculos', 40000, 'KG', 0.528)],
     despachos: [
-      { id: 'D-01', material: '1005512', cantidad: 40000, salida: '2026-03-18', ruta: 'laredo', aduana: [true, true, true, true], logistica: [true, true, true, true] },
+      { id: 'DPE6', material: '1005512', cantidad: 40000, salida: '2026-03-18', ruta: 'laredo', aduana: [true, true, true, true], logistica: [true, true, true, true] },
     ],
   },
   {
@@ -338,7 +340,7 @@ export const ORDENES_INICIALES = [
     instrucciones: '',
     materiales: [m('1002310', 'Piña MD2', 'Frutas frescas', 24000, 'KG', 0.598)],
     despachos: [
-      { id: 'D-01', material: '1002310', cantidad: 24000, salida: '2024-09-25', ruta: 'miami', aduana: [true, true, true, true], logistica: [true, true, true, true] },
+      { id: 'DPE7', material: '1002310', cantidad: 24000, salida: '2024-09-25', ruta: 'miami', aduana: [true, true, true, true], logistica: [true, true, true, true] },
     ],
   },
   {

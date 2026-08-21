@@ -136,8 +136,8 @@ export default function ModalCrearDespacho({ oc, onClose }) {
   function crear() {
     agregarDespachos(
       oc.id,
-      marcadas.map((f, i) => ({
-        id: `D-${String(i + 1).padStart(2, '0')}`,
+      // El código DPE lo asigna el store, que es quien conoce el correlativo global.
+      marcadas.map((f) => ({
         material: material.codigo,
         cantidad: f.cantidad,
         salida: f.salida,
@@ -523,7 +523,7 @@ export default function ModalCrearDespacho({ oc, onClose }) {
                             onChange={(e) => setFila(f.id, { marcado: e.target.checked })}
                           />
                         </td>
-                        <td className="cell-key">D-{String(f.id).padStart(2, '0')}</td>
+                        <td className="cell-key text-ink-3">Nuevo #{f.id}</td>
                         <td className="cell-strong">
                           {material.codigo} · {material.nombre}
                         </td>

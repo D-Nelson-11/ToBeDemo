@@ -75,7 +75,7 @@ const uid = () => Math.random().toString(36).slice(2)
 function ocrFactura(fila, cantidadTotal) {
   return {
     valores: {
-      factura: `FAC-${fila.despacho.id.replace('-', '')}${fila.oc.id.slice(-4)}`,
+      factura: `FAC-${fila.oc.id.slice(-5)}-${fila.despacho.id.replace(/\D/g, '')}`,
       fechaFactura: toISO(hoy()),
       telefono: '+1 562 802 4020',
       blDoc: `MAEU${fila.oc.id.slice(-7)}`,

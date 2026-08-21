@@ -10,6 +10,17 @@ const normalizar = (d) => ({
   ...d,
 })
 
+// Correlativo global de despachos: DPE + número. El prefijo es fijo y el número
+// no se reinicia por OC, así ningún código se repite en pantalla.
+export const PREFIJO_DESPACHO = 'DPE'
+
+const ultimoCorrelativo = (ordenes) =>
+  ordenes.reduce(
+    (max, oc) =>
+      oc.despachos.reduce((m, d) => Math.max(m, Number(String(d.id).replace(/\D/g, '')) || 0), max),
+    0,
+  )
+
 function reducer(state, action) {
   switch (action.type) {
     case 'toggle-estado':
@@ -24,16 +35,22 @@ function reducer(state, action) {
       return state.map((oc) => (oc.id === action.id ? { ...oc, ...action.patch } : oc))
     case 'crear':
       return [action.oc, ...state]
-    case 'agregar-despachos':
+    case 'agregar-despachos': {
+      // El código se asigna acá y no en la pantalla: es lo único que ve todo el store.
+      let n = ultimoCorrelativo(state)
+      const nuevos = action.despachos.map((d) =>
+        normalizar({ ...d, id: PREFIJO_DESPACHO + ++n }),
+      )
       return state.map((oc) =>
         oc.id === action.id
           ? {
               ...oc,
-              despachos: [...oc.despachos, ...action.despachos.map(normalizar)],
+              despachos: [...oc.despachos, ...nuevos],
               pendiente: oc.pendiente === 'programar' || oc.pendiente === 'fechas' ? null : oc.pendiente,
             }
           : oc,
       )
+    }
     // Reprograma varios despachos de una sola vez. Guarda la fecha planificada
     // original la primera vez, para poder mostrar siempre la variación contra el plan.
     case 'reprogramar':

@@ -7,6 +7,7 @@ import OrdenCompra from './screens/OrdenCompra'
 import Despachos from './screens/Despachos'
 import Seguimiento from './screens/Seguimiento'
 import Gestiones from './screens/Gestiones'
+import Torre from './screens/Torre'
 import './styles/app.css'
 
 createRoot(document.getElementById('root')).render(
@@ -19,6 +20,7 @@ createRoot(document.getElementById('root')).render(
             <Route path="/despachos" element={<Despachos />} />
             <Route path="/seguimiento" element={<Seguimiento />} />
             <Route path="/gestiones" element={<Gestiones />} />
+            <Route path="/torre" element={<Torre />} />
             <Route path="*" element={<Navigate to="/orden-compra" replace />} />
           </Route>
         </Routes>

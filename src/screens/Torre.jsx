@@ -1,0 +1,664 @@
+import { useMemo, useState } from 'react'
+import {
+  LuBanknote,
+  LuBellRing,
+  LuCircleCheck,
+  LuContainer,
+  LuEllipsis,
+  LuMapPin,
+  LuSearch,
+  LuShip,
+  LuTriangleAlert,
+  LuTruck,
+  LuWarehouse,
+} from 'react-icons/lu'
+import Modal from '../components/ui/Modal'
+import Button, { cx } from '../components/ui/Button'
+import { Select } from '../components/ui/Field'
+import RielTransito from '../components/RielTransito'
+import { useOc } from '../data/store'
+import {
+  CAUSAS_COSTO,
+  ETAPAS_TRAMITE,
+  NIVELES,
+  RIESGOS,
+  SEGMENTOS,
+  construirAlertas,
+  construirCostos,
+  construirEmbarques,
+  estatusAduana,
+  etapaTramite,
+  prioridadDe,
+  requisitosDestino,
+} from '../lib/torre'
+import { fmtFechaCorta, fmtNum } from '../lib/fechas'
+
+const ICONO_SEGMENTO = {
+  Todos: LuContainer,
+  'En Origen': LuWarehouse,
+  'Puerto de Origen': LuContainer,
+  'Tránsito Internacional': LuShip,
+  'Aduana de Destino': LuBanknote,
+  'Tránsito a Planta': LuTruck,
+  'En Planta': LuWarehouse,
+}
+
+const TONO_RIESGO = {
+  'Dentro de tiempo': { chip: 'bg-teal-50 text-teal-700', punto: 'bg-teal-600', texto: 'text-teal-700', lomo: 'var(--color-teal-600)' },
+  'En riesgo': { chip: 'bg-ambar-50 text-ambar-700', punto: 'bg-ambar-500', texto: 'text-ambar-700', lomo: 'var(--color-ambar-500)' },
+  'Fuera de tiempo': { chip: 'bg-rojo-50 text-rojo-700', punto: 'bg-rojo-600', texto: 'text-rojo-700', lomo: 'var(--color-rojo-600)' },
+}
+
+const TONO_NIVEL = {
+  teal: 'border-teal-100 bg-teal-50 text-teal-700',
+  ambar: 'border-ambar-100 bg-ambar-50 text-ambar-700',
+  rojo: 'border-rojo-100 bg-rojo-50 text-rojo-700',
+}
+
+function Kpi({ rotulo, valor, alerta }) {
+  return (
+    <div
+      className={cx(
+        'min-w-[150px] flex-1 rounded-sm border px-3 py-2.5',
+        alerta ? 'border-rojo-100 bg-rojo-50' : 'border-line bg-surface',
+      )}
+    >
+      <div className="text-sm text-ink-3">{rotulo}</div>
+      <div className={cx('num text-2xl font-bold', alerta ? 'text-rojo-700' : 'text-navy-800')}>
+        {valor}
+      </div>
+    </div>
+  )
+}
+
+function BarraReq({ items }) {
+  const hechos = items.filter(([, ok]) => ok).length
+  const pct = Math.round((hechos / items.length) * 100)
+  const tono = pct === 100 ? 'bg-teal-600' : pct >= 50 ? 'bg-ambar-500' : 'bg-rojo-600'
+  return (
+    <div className="mb-2 flex items-center gap-2">
+      <span className="h-[5px] flex-1 overflow-hidden rounded-full bg-surface-3">
+        <span className={cx('block h-full', tono)} style={{ width: `${pct}%` }} />
+      </span>
+      <span className="num text-xs text-ink-3">
+        {hechos}/{items.length}
+      </span>
+    </div>
+  )
+}
+
+export default function Torre() {
+  const { ordenes, avisar } = useOc()
+  const [segmento, setSegmento] = useState('Todos')
+  const [sitio, setSitio] = useState('')
+  const [riesgo, setRiesgo] = useState('')
+  const [q, setQ] = useState('')
+  const [causa, setCausa] = useState('')
+  const [nivelFiltro, setNivelFiltro] = useState('')
+  const [detalle, setDetalle] = useState(null)
+
+  const embarques = useMemo(() => construirEmbarques(ordenes), [ordenes])
+  const costos = useMemo(() => construirCostos(embarques), [embarques])
+  const alertas = useMemo(() => construirAlertas(embarques), [embarques])
+
+  const sitios = useMemo(() => [...new Set(embarques.map((e) => e.sitio))], [embarques])
+
+  const filtrados = useMemo(() => {
+    const t = q.toLowerCase().trim()
+    return embarques.filter(
+      (e) =>
+        (segmento === 'Todos' || e.segmento === segmento) &&
+        (!sitio || e.sitio === sitio) &&
+        (!riesgo || e.riesgo === riesgo) &&
+        (!t ||
+          `${e.id} ${e.oc.proveedor} ${e.sitio} ${e.ubicacion} ${e.material?.nombre}`
+            .toLowerCase()
+            .includes(t)),
+    )
+  }, [embarques, segmento, sitio, riesgo, q])
+
+  const conteoSegmento = useMemo(() => {
+    const c = { Todos: embarques.length }
+    SEGMENTOS.slice(1).forEach((s) => (c[s] = embarques.filter((e) => e.segmento === s).length))
+    return c
+  }, [embarques])
+
+  const enAduana = useMemo(
+    () => embarques.filter((e) => e.segmento === 'Aduana de Destino'),
+    [embarques],
+  )
+
+  const costosFiltrados = costos.filter((c) => !causa || c.causa === causa)
+  const alertasFiltradas = alertas.filter((a) => !nivelFiltro || String(a.nivel) === nivelFiltro)
+
+  const esPagina = segmento === 'Costos' || segmento === 'Alertas'
+
+  return (
+    <div className="min-h-full">
+      <div className="contenedor flex flex-col gap-4 py-4">
+        {/* Segmentos del viaje: son el eje de toda la torre */}
+        <div className="flex flex-wrap gap-1.5">
+          {[...SEGMENTOS, 'Costos', 'Alertas'].map((s) => {
+            const Icono = ICONO_SEGMENTO[s] ?? (s === 'Costos' ? LuBanknote : LuBellRing)
+            const activo = segmento === s
+            const n = s === 'Costos' ? costos.length : s === 'Alertas' ? alertas.length : conteoSegmento[s]
+            return (
+              <button
+                key={s}
+                onClick={() => setSegmento(s)}
+                className={cx(
+                  'inline-flex items-center gap-2 rounded-sm border px-3 py-2 text-sm transition-colors duration-100',
+                  activo
+                    ? 'border-navy-800 bg-navy-800 font-semibold text-white'
+                    : 'border-line bg-surface text-ink-2 hover:border-navy-400 hover:text-ink',
+                )}
+              >
+                <Icono size={13} className={activo ? 'text-white/75' : 'text-ink-4'} />
+                {s}
+                <span
+                  className={cx(
+                    'num rounded-full px-1.5 text-xs font-bold',
+                    activo ? 'bg-white/20 text-white' : 'bg-surface-3 text-ink-3',
+                  )}
+                >
+                  {n}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Leyenda de riesgo */}
+        <div className="flex flex-wrap items-center gap-4 text-sm text-ink-3">
+          {RIESGOS.map((r) => (
+            <span key={r} className="flex items-center gap-1.5">
+              <span className={cx('h-2 w-2 rounded-full', TONO_RIESGO[r].punto)} />
+              {r}
+              <b className={cx('num font-bold', TONO_RIESGO[r].texto)}>
+                {embarques.filter((e) => e.riesgo === r).length}
+              </b>
+            </span>
+          ))}
+        </div>
+
+        {/* ------------------------------ EMBARQUES ------------------------------ */}
+        {!esPagina && (
+          <>
+            <div className="panel">
+              <div className="panel-head">
+                <span className="panel-title">
+                  Embarques — {segmento === 'Todos' ? 'todos los segmentos' : segmento}
+                </span>
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                  <Select
+                    placeholder="Todos los sitios"
+                    options={sitios}
+                    value={sitio}
+                    onChange={(e) => setSitio(e.target.value)}
+                    className="w-[190px]"
+                  />
+                  <Select
+                    placeholder="Todos los riesgos"
+                    options={RIESGOS}
+                    value={riesgo}
+                    onChange={(e) => setRiesgo(e.target.value)}
+                    className="w-[170px]"
+                  />
+                  <div className="relative flex items-center">
+                    <LuSearch size={13} className="pointer-events-none absolute left-2.5 text-ink-4" />
+                    <input
+                      className="inp w-[230px] pl-7"
+                      placeholder="Buscar embarque, OC, sitio…"
+                      value={q}
+                      onChange={(e) => setQ(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="tabla-scroll">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th className="w-[150px]">Embarque</th>
+                      <th className="w-[140px]">Transporte</th>
+                      <th className="w-[160px]">Estado</th>
+                      <th className="min-w-[170px]">Ubicación</th>
+                      <th className="w-[180px]">Sitio</th>
+                      <th className="w-[210px]">ETD / ETA</th>
+                      <th className="w-[100px] text-right!">Desviación</th>
+                      <th className="w-[120px]">Actualizado</th>
+                      <th className="w-[140px]">Riesgo</th>
+                      <th className="w-[52px]" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtrados.length === 0 && (
+                      <tr>
+                        <td colSpan={10} className="h-[140px]! bg-surface text-center text-sm text-ink-3">
+                          Ningún embarque en este segmento con los filtros aplicados.
+                        </td>
+                      </tr>
+                    )}
+                    {filtrados.map((e) => {
+                      const tono = TONO_RIESGO[e.riesgo]
+                      return (
+                        <tr key={e.clave} style={{ '--spine': tono.lomo }}>
+                          <td className="cell-key">{e.id}</td>
+                          <td>{e.transporte}</td>
+                          <td className="cell-strong">{e.segmento}</td>
+                          <td className="cell-cut" title={e.ubicacion}>
+                            <span className="flex items-center gap-1.5">
+                              <LuMapPin size={12} className="shrink-0 text-ink-4" />
+                              {e.ubicacion}
+                            </span>
+                          </td>
+                          <td className="cell-cut" title={e.sitio}>
+                            {e.sitio}
+                          </td>
+                          <td className="num">
+                            ETD {fmtFechaCorta(e.etd)} <span className="text-ink-4">·</span> ETA{' '}
+                            {fmtFechaCorta(e.planta)}
+                          </td>
+                          <td className={cx('cell-num font-bold', e.delay > 0 && tono.texto)}>
+                            {e.delay > 0 ? `+${e.delay} d` : '0 d'}
+                          </td>
+                          <td className="num text-ink-3">Hoy · {e.actualizado}</td>
+                          <td>
+                            <span
+                              className={cx(
+                                'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-[3px] text-xs font-semibold',
+                                tono.chip,
+                              )}
+                            >
+                              {e.riesgo === 'Dentro de tiempo' ? (
+                                <LuCircleCheck size={11} />
+                              ) : (
+                                <LuTriangleAlert size={11} />
+                              )}
+                              {e.riesgo}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="flex justify-end">
+                              <button
+                                className="ico"
+                                title="Ver detalle del embarque"
+                                onClick={() => setDetalle(e)}
+                              >
+                                <LuEllipsis size={15} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="panel">
+                <div className="panel-head">
+                  <span className="panel-title">Notas automáticas y propuestas de decisión</span>
+                </div>
+                <div className="flex flex-col gap-2 p-4">
+                  {alertas.length === 0 && (
+                    <p className="text-sm text-ink-3">
+                      Sin desviaciones: ningún embarque se movió respecto de su fecha planificada.
+                    </p>
+                  )}
+                  {alertas.map((a) => (
+                    <div
+                      key={a.clave}
+                      className="flex flex-wrap items-center gap-2 rounded-sm border border-line bg-surface-2 px-3 py-2 text-sm"
+                    >
+                      <b className="font-bold text-ink">{a.embarque.id}:</b>
+                      <span className="min-w-0 flex-1 text-ink-2">{a.texto}</span>
+                      <span
+                        className={cx(
+                          'whitespace-nowrap rounded-full border px-2 py-[2px] text-xs font-semibold',
+                          TONO_NIVEL[NIVELES[a.nivel].tono],
+                        )}
+                      >
+                        {NIVELES[a.nivel].rotulo}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="panel">
+                <div className="panel-head">
+                  <span className="panel-title">Reglas de comunicación</span>
+                </div>
+                <div className="flex flex-col gap-2 p-4">
+                  {[1, 2, 3].map((n) => (
+                    <div
+                      key={n}
+                      className={cx(
+                        'flex flex-wrap items-baseline gap-2 rounded-sm border px-3 py-2 text-sm',
+                        TONO_NIVEL[NIVELES[n].tono],
+                      )}
+                    >
+                      <b className="font-bold">{NIVELES[n].rotulo}</b>
+                      <span className="min-w-0 flex-1">{NIVELES[n].regla}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* La aduana de destino tiene su propio trámite por embarque */}
+            {segmento === 'Aduana de Destino' && (
+              <div className="flex flex-col gap-4">
+                {enAduana.length === 0 && (
+                  <div className="panel p-4 text-sm text-ink-3">
+                    No hay embarques en aduana de destino en este momento.
+                  </div>
+                )}
+                {enAduana.map((e, i) => {
+                  const grupos = requisitosDestino(e)
+                  const etapa = etapaTramite(e)
+                  const tono = TONO_RIESGO[e.riesgo]
+                  return (
+                    <div key={e.clave} className="panel">
+                      <div className="panel-head flex-wrap">
+                        <span className="panel-title">
+                          #{i + 1} · {e.id}
+                        </span>
+                        <span className="text-sm text-ink-3">
+                          {e.oc.proveedor} · {e.ruta.frontera} · ETA {fmtFechaCorta(e.planta)}
+                          {e.delay > 0 && (
+                            <b className={cx('num font-bold', tono.texto)}> · +{e.delay} d</b>
+                          )}
+                        </span>
+                        <div className="ml-auto flex items-center gap-2">
+                          <span className="rounded-full bg-surface-3 px-2.5 py-[3px] text-xs font-semibold text-ink-2">
+                            Prioridad {prioridadDe(e).toLowerCase()}
+                          </span>
+                          <span
+                            className={cx(
+                              'rounded-full px-2.5 py-[3px] text-xs font-semibold',
+                              tono.chip,
+                            )}
+                          >
+                            {estatusAduana(e)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 xl:grid-cols-5">
+                        {grupos.map((gr) => (
+                          <div key={gr.grupo}>
+                            <div className="lbl mb-1.5">{gr.grupo}</div>
+                            <BarraReq items={gr.items} />
+                            <ul className="m-0 flex list-none flex-col gap-1 p-0">
+                              {gr.items.map(([rotulo, ok]) => (
+                                <li
+                                  key={rotulo}
+                                  className={cx(
+                                    'flex items-start gap-1.5 text-sm',
+                                    ok ? 'text-ink-3 line-through' : 'text-ink',
+                                  )}
+                                >
+                                  <input type="checkbox" className="chk mt-px" checked={ok} readOnly />
+                                  {rotulo}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Línea del trámite en aduana */}
+                      <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-line bg-surface-2 px-4 py-3">
+                        {ETAPAS_TRAMITE.map((et, j) => (
+                          <span
+                            key={et}
+                            className={cx(
+                              'flex items-center gap-2 text-sm',
+                              j < etapa ? 'text-teal-700' : j === etapa ? 'font-bold text-navy-800' : 'text-ink-4',
+                            )}
+                          >
+                            <span
+                              className={cx(
+                                'h-2 w-2 rounded-full',
+                                j < etapa
+                                  ? 'bg-teal-600'
+                                  : j === etapa
+                                    ? 'bg-navy-800 ring-2 ring-navy-200'
+                                    : 'bg-line-strong',
+                              )}
+                            />
+                            {et}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* -------------------------------- COSTOS -------------------------------- */}
+        {segmento === 'Costos' && (
+          <>
+            <div className="flex flex-wrap gap-3">
+              <Kpi rotulo="Embarques con costo" valor={costos.length} alerta={costos.length > 0} />
+              <Kpi rotulo="Días de desviación" valor={costos.reduce((a, c) => a + c.dias, 0)} />
+              <Kpi
+                rotulo="Costo abierto total"
+                valor={`$ ${fmtNum(costos.reduce((a, c) => a + c.total, 0))}`}
+                alerta
+              />
+            </div>
+
+            <div className="panel">
+              <div className="panel-head">
+                <span className="panel-title">Segmento de costos logísticos</span>
+                <div className="ml-auto">
+                  <Select
+                    placeholder="Todas las causas"
+                    options={CAUSAS_COSTO}
+                    value={causa}
+                    onChange={(e) => setCausa(e.target.value)}
+                    className="w-[210px]"
+                  />
+                </div>
+              </div>
+              <div className="tabla-scroll">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th className="w-[150px]">Embarque</th>
+                      <th className="w-[180px]">Sitio</th>
+                      <th className="w-[110px]">Tipo</th>
+                      <th className="w-[150px]">Causa</th>
+                      <th className="min-w-[260px]">Motivo</th>
+                      <th className="w-[70px] text-right!">Días</th>
+                      <th className="w-[110px] text-right!">Costo / día</th>
+                      <th className="w-[120px] text-right!">Costo causa</th>
+                      <th className="min-w-[210px]">Comunicar a</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {costosFiltrados.length === 0 && (
+                      <tr>
+                        <td colSpan={9} className="h-[140px]! bg-surface text-center text-sm text-ink-3">
+                          Sin costos abiertos: ningún embarque acumula desviación.
+                        </td>
+                      </tr>
+                    )}
+                    {costosFiltrados.map((c) => (
+                      <tr key={c.clave} style={{ '--spine': 'var(--color-rojo-600)' }}>
+                        <td className="cell-key">{c.embarque.id}</td>
+                        <td className="cell-cut">{c.embarque.sitio}</td>
+                        <td>
+                          <span className="rounded-full bg-surface-3 px-2 py-[3px] text-xs font-semibold text-ink-2">
+                            {c.tipo}
+                          </span>
+                        </td>
+                        <td className="cell-strong">{c.causa}</td>
+                        <td className="cell-cut" title={c.motivo}>
+                          {c.motivo}
+                        </td>
+                        <td className="cell-num">{c.dias}</td>
+                        <td className="cell-num">$ {fmtNum(c.costoDia)}</td>
+                        <td className="cell-num font-bold text-rojo-700">$ {fmtNum(c.total)}</td>
+                        <td className="cell-cut">{c.comunicar}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ------------------------------- ALERTAS -------------------------------- */}
+        {segmento === 'Alertas' && (
+          <div className="panel">
+            <div className="panel-head">
+              <span className="panel-title">Alertas y notificaciones automáticas</span>
+              <div className="ml-auto flex items-center gap-2">
+                <Select
+                  placeholder="Todos los niveles"
+                  options={[
+                    { value: '1', label: 'Nivel 1' },
+                    { value: '2', label: 'Nivel 2' },
+                    { value: '3', label: 'Nivel 3' },
+                  ]}
+                  value={nivelFiltro}
+                  onChange={(e) => setNivelFiltro(e.target.value)}
+                  className="w-[170px]"
+                />
+                <Button onClick={() => avisar('Alertas notificadas a los responsables.', 'ok')}>
+                  <LuBellRing size={14} />
+                  Notificar
+                </Button>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 p-4">
+              {alertasFiltradas.length === 0 && (
+                <p className="text-sm text-ink-3">Sin alertas activas con este filtro.</p>
+              )}
+              {alertasFiltradas.map((a) => (
+                <div
+                  key={a.clave}
+                  className={cx(
+                    'flex flex-wrap items-start gap-2.5 rounded-sm border px-3 py-2.5 text-sm',
+                    TONO_NIVEL[NIVELES[a.nivel].tono],
+                  )}
+                >
+                  <LuTriangleAlert size={15} className="mt-px shrink-0" />
+                  <span className="min-w-0 flex-1">
+                    <b className="font-bold">
+                      {NIVELES[a.nivel].rotulo} · {a.embarque.id}
+                    </b>
+                    <span className="block">{a.texto}</span>
+                  </span>
+                  <Button size="sm" onClick={() => setDetalle(a.embarque)}>
+                    Ver embarque
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ------------------------------- DETALLE -------------------------------- */}
+      <Modal
+        open={!!detalle}
+        onClose={() => setDetalle(null)}
+        size="lg"
+        eyebrow={detalle ? `${detalle.oc.proveedor} · ${detalle.transporte}` : ''}
+        title={detalle ? `Embarque ${detalle.id}` : ''}
+        footer={
+          <>
+            <span className="min-w-0 flex-1 text-sm text-ink-2">
+              {detalle?.delay > 0
+                ? `Acumula +${detalle.delay} días contra la fecha planificada.`
+                : 'Sin desviación contra la fecha planificada.'}
+            </span>
+            <Button variant="quiet" onClick={() => setDetalle(null)}>
+              Cerrar
+            </Button>
+          </>
+        }
+      >
+        {detalle && (
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap gap-3">
+              <Kpi rotulo="Segmento actual" valor={detalle.segmento} />
+              <Kpi rotulo="Días de desviación" valor={`${detalle.delay} d`} alerta={detalle.delay > 0} />
+              <Kpi rotulo="Cantidad" valor={`${fmtNum(detalle.despacho.cantidad)} ${detalle.material?.unidad}`} />
+            </div>
+
+            <div className="panel p-4">
+              <div className="lbl mb-3">Ruta y ubicación</div>
+              <RielTransito
+                estado={detalle.delay > 2 ? 'tarde' : 'activo'}
+                tramos={[detalle.ruta.leg1, detalle.ruta.leg2]}
+                nodos={[
+                  { rotulo: 'Salida proveedor', fecha: detalle.etd, lugar: detalle.ruta.origen },
+                  { rotulo: 'ETA frontera', fecha: detalle.frontera, lugar: detalle.ruta.frontera },
+                  { rotulo: 'En planta', fecha: detalle.planta, lugar: detalle.oc.centro, ancla: true },
+                ]}
+              />
+            </div>
+
+            <div className="panel p-4">
+              <div className="lbl mb-3">Trámite en aduana de destino</div>
+              <div className="flex flex-wrap gap-x-6 gap-y-2">
+                {ETAPAS_TRAMITE.map((et, j) => {
+                  const etapa = etapaTramite(detalle)
+                  return (
+                    <span
+                      key={et}
+                      className={cx(
+                        'flex items-center gap-2 text-sm',
+                        j < etapa ? 'text-teal-700' : j === etapa ? 'font-bold text-navy-800' : 'text-ink-4',
+                      )}
+                    >
+                      <span
+                        className={cx(
+                          'h-2 w-2 rounded-full',
+                          j < etapa ? 'bg-teal-600' : j === etapa ? 'bg-navy-800 ring-2 ring-navy-200' : 'bg-line-strong',
+                        )}
+                      />
+                      {et}
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="panel p-4">
+              <div className="lbl mb-2">Proyección y comunicación</div>
+              <p className="text-base text-ink-2">
+                {detalle.delay > 0 ? (
+                  <>
+                    Fecha planificada de salida <b className="num">{fmtFechaCorta(detalle.plan)}</b>,
+                    reprogramada a <b className="num">{fmtFechaCorta(detalle.etd)}</b>. Nueva llegada a
+                    planta: <b className="num">{fmtFechaCorta(detalle.planta)}</b>.{' '}
+                    {NIVELES[detalle.delay > 3 ? 3 : detalle.delay >= 2 ? 2 : 1].regla}
+                  </>
+                ) : (
+                  <>
+                    El embarque va según lo planificado. Llegada a planta prevista para{' '}
+                    <b className="num">{fmtFechaCorta(detalle.planta)}</b>.
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  )
+}
