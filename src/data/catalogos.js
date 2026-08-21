@@ -242,3 +242,12 @@ export function requisitosAduana(material, ruta) {
     ...arma(porRuta, 'Ruta y origen'),
   ]
 }
+
+// Régimen bajo el que entra la mercancía; define el trámite y los impuestos.
+export const REGIMENES = [
+  'Importación definitiva',
+  'Admisión temporal para perfeccionamiento activo',
+  'Depósito aduanero',
+  'Zona libre',
+  'Reimportación',
+]

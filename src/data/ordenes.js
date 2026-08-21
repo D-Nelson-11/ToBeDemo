@@ -169,11 +169,12 @@ export const ORDENES_INICIALES = [
         logistica: [true, true, true, false],
       },
       {
+        // Reembarcado por otra ruta: no se puede gestionar junto con D-01 y D-02.
         id: 'D-03',
         material: '1002104',
         cantidad: 20000,
         salida: '2026-09-05',
-        ruta: 'longbeach',
+        ruta: 'houston',
         aduana: [true, true, true, true],
         logistica: [true, true, true, true],
       },

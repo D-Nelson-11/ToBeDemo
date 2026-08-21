@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
+  LuCalendarClock,
   LuCircleAlert,
   LuCircleCheck,
+  LuListChecks,
   LuFileText,
   LuMilestone,
   LuPaperclip,
@@ -15,7 +17,7 @@ import {
 import Button, { cx } from '../components/ui/Button'
 import { Field, Input, Select, Textarea } from '../components/ui/Field'
 import { useOc } from '../data/store'
-import { INCOTERMS, MONEDAS, RUTAS } from '../data/catalogos'
+import { INCOTERMS, MONEDAS, REGIMENES, RUTAS } from '../data/catalogos'
 import { addDays, fmtFechaCorta, fmtNum, hoy, parseISO, toISO } from '../lib/fechas'
 
 // ---------------------------------------------------------------------------
@@ -64,12 +66,13 @@ const GESTION_VACIA = {
   seguro: '',
   instrucciones: '',
   observaciones: '',
+  regimen: '',
 }
 
 const uid = () => Math.random().toString(36).slice(2)
 
 /** Lo que "lee" el OCR de cada documento. */
-function ocrFactura(fila) {
+function ocrFactura(fila, cantidadTotal) {
   return {
     valores: {
       factura: `FAC-${fila.despacho.id.replace('-', '')}${fila.oc.id.slice(-4)}`,
@@ -84,8 +87,8 @@ function ocrFactura(fila) {
         uid: uid(),
         codigo: fila.material?.codigo ?? '1001551',
         descripcion: fila.material?.nombre ?? 'Material',
-        cantidad: fila.despacho.cantidad,
-        peso: fila.despacho.cantidad,
+        cantidad: cantidadTotal,
+        peso: cantidadTotal,
         unitario: fila.material?.precio ?? 0.5,
       },
       {
@@ -185,7 +188,8 @@ function CampoFijo({ label, valor }) {
 export default function Gestiones() {
   const { ordenes, avisar } = useOc()
   const [tab, setTab] = useState('factura')
-  const [sel, setSel] = useState(null)
+  const [panel, setPanel] = useState(null)
+  const [sel, setSel] = useState(() => new Set())
   const [datos, setDatos] = useState({})
 
   // Los despachos ya programados son los que necesitan gestión aduanera.
@@ -211,15 +215,59 @@ export default function Gestiones() {
     return out
   }, [ordenes])
 
-  const fila = despachos.find((d) => d.clave === sel) ?? despachos[0] ?? null
+  // Una gestión solo puede cubrir despachos de la misma OC y por la misma ruta:
+  // comparten factura, BL y trámite aduanero. Por eso el grupo es OC + ruta.
+  const grupos = useMemo(() => {
+    const m = new Map()
+    despachos.forEach((d) => {
+      const clave = d.oc.id + '|' + d.ruta.id
+      if (!m.has(clave)) m.set(clave, { clave, oc: d.oc, ruta: d.ruta, items: [] })
+      m.get(clave).items.push(d)
+    })
+    return [...m.values()]
+  }, [despachos])
+
+  // Siempre hay al menos uno seleccionado: la pantalla no tiene estado vacío útil.
+  useEffect(() => {
+    if (!sel.size && despachos.length) setSel(new Set([despachos[0].clave]))
+  }, [despachos, sel.size])
+
+  const seleccionadas = despachos.filter((d) => sel.has(d.clave))
+  const fila = seleccionadas[0] ?? despachos[0] ?? null
+  const grupoActivo = fila ? fila.oc.id + '|' + fila.ruta.id : null
+  const cantidadTotal = seleccionadas.reduce((a, d) => a + d.despacho.cantidad, 0)
+
   const g = (fila && datos[fila.clave]) || GESTION_VACIA
 
+  // Cada cambio se escribe en todos los despachos marcados: el trámite es uno solo.
   const setG = (patch) =>
-    setDatos((prev) => ({
-      ...prev,
-      [fila.clave]: { ...(prev[fila.clave] ?? GESTION_VACIA), ...patch },
-    }))
+    setDatos((prev) => {
+      const next = { ...prev }
+      const destinos = seleccionadas.length ? seleccionadas : [fila]
+      destinos.forEach((d) => {
+        next[d.clave] = { ...(prev[d.clave] ?? GESTION_VACIA), ...patch }
+      })
+      return next
+    })
   const setCampo = (lista, id, valor) => setG({ [lista]: { ...g[lista], [id]: valor } })
+
+  // Dentro del grupo activo el check suma o resta, sin dejar la selección vacía.
+  // Marcar algo de otro grupo reemplaza la selección: nunca se mezclan OC ni rutas.
+  const alternar = (d) =>
+    setSel((prev) => {
+      if (d.oc.id + '|' + d.ruta.id !== grupoActivo) return new Set([d.clave])
+      const s = new Set(prev)
+      if (s.has(d.clave)) {
+        if (s.size === 1) return prev
+        s.delete(d.clave)
+      } else {
+        s.add(d.clave)
+      }
+      return s
+    })
+
+  const marcarGrupo = (grupo, todos) =>
+    setSel(new Set(todos ? grupo.items.map((d) => d.clave) : [grupo.items[0].clave]))
 
   // Estado de llenado: alimenta las pestañas, el aviso y el botón de procesar.
   const estado = useMemo(() => {
@@ -260,7 +308,7 @@ export default function Gestiones() {
 
   function usarOcr() {
     if (tab === 'factura') {
-      const { valores, skus } = ocrFactura(fila)
+      const { valores, skus } = ocrFactura(fila, cantidadTotal)
       setG({ factura: { ...g.factura, ...valores }, skus })
       avisar(`OCR de factura: ${Object.keys(valores).length} campos y ${skus.length} SKU extraídos.`, 'ok')
     } else {
@@ -280,43 +328,106 @@ export default function Gestiones() {
               <span className="panel-title">Despachos</span>
               <span className="num ml-auto text-xs text-ink-3">{despachos.length}</span>
             </div>
+            <p className="border-b border-line bg-surface-2 px-3 py-2 text-sm text-ink-3">
+              Se pueden marcar varios despachos, siempre que sean de la misma OC y por la misma
+              ruta. Marcar uno de otro grupo reemplaza la selección.
+            </p>
             <ul className="tabla-scroll m-0 list-none p-0">
-              {despachos.map((d) => {
-                const dg = datos[d.clave]
-                const completo =
-                  dg &&
-                  !faltantes(dg.factura, CAMPOS_FACTURA).length &&
-                  !faltantes(dg.bl, CAMPOS_BL).length &&
-                  dg.skus.length > 0
-                const iniciado = dg && (Object.keys(dg.factura).length || Object.keys(dg.bl).length)
+              {grupos.map((grupo) => {
+                const { oc, ruta, items } = grupo
+                const activo = grupo.clave === grupoActivo
+                const todos = items.every((d) => sel.has(d.clave))
                 return (
-                  <li key={d.clave}>
-                    <button
-                      onClick={() => setSel(d.clave)}
+                  <li key={grupo.clave}>
+                    <div
                       className={cx(
-                        'flex w-full items-center gap-2 border-b border-line-soft px-3 py-2.5 text-left transition-colors duration-100',
-                        d.clave === fila.clave ? 'bg-navy-50' : 'hover:bg-surface-2',
+                        'flex items-start gap-2 border-b border-line px-3 py-2',
+                        activo ? 'bg-navy-50' : 'bg-surface-3',
                       )}
                     >
+                      <input
+                        type="checkbox"
+                        className="chk mt-0.5"
+                        aria-label={'Seleccionar los despachos de la OC ' + oc.id + ' por ' + ruta.frontera}
+                        checked={todos}
+                        ref={(el) => {
+                          if (el) {
+                            const n = items.filter((d) => sel.has(d.clave)).length
+                            el.indeterminate = n > 0 && n < items.length
+                          }
+                        }}
+                        onChange={(e) => marcarGrupo(grupo, e.target.checked)}
+                      />
                       <span className="min-w-0 flex-1">
-                        <span className="block text-base font-bold text-ink">
-                          {d.oc.id} · {d.despacho.id}
+                        <span
+                          className={cx(
+                            'block text-sm font-bold',
+                            activo ? 'text-navy-800' : 'text-ink-3',
+                          )}
+                        >
+                          OC {oc.id}
                         </span>
-                        <span className="block truncate text-sm text-ink-3">{d.oc.proveedor}</span>
+                        {/* La ruta es parte de la identidad del grupo: no se pueden mezclar */}
+                        <span className="block truncate text-xs text-ink-3">
+                          {ruta.origen} → {ruta.frontera}
+                        </span>
                       </span>
-                      <span
-                        className={cx(
-                          'shrink-0 whitespace-nowrap rounded-full px-2 py-[3px] text-xs font-semibold',
-                          completo
-                            ? 'bg-teal-50 text-teal-700'
-                            : iniciado
-                              ? 'bg-ambar-50 text-ambar-700'
-                              : 'bg-surface-3 text-ink-3',
-                        )}
-                      >
-                        {completo ? 'Completo' : iniciado ? 'En proceso' : 'Sin iniciar'}
-                      </span>
-                    </button>
+                      <span className="num mt-0.5 text-xs text-ink-3">{items.length}</span>
+                    </div>
+
+                    {items.map((d) => {
+                      const dg = datos[d.clave]
+                      const completo =
+                        dg &&
+                        !faltantes(dg.factura, CAMPOS_FACTURA).length &&
+                        !faltantes(dg.bl, CAMPOS_BL).length &&
+                        dg.skus.length > 0
+                      const iniciado =
+                        dg && (Object.keys(dg.factura).length || Object.keys(dg.bl).length)
+                      const marcado = sel.has(d.clave)
+                      return (
+                        <div
+                          key={d.clave}
+                          className={cx(
+                            'flex items-center gap-2 border-b border-line-soft px-3 py-2 transition-colors duration-100',
+                            marcado ? 'bg-navy-50' : 'hover:bg-surface-2',
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            className="chk"
+                            aria-label={'Seleccionar ' + d.despacho.id}
+                            checked={marcado}
+                            onChange={() => alternar(d)}
+                          />
+                          <button
+                            onClick={() => alternar(d)}
+                            className="min-w-0 flex-1 text-left"
+                            title={activo ? undefined : 'Reemplaza la selección actual'}
+                          >
+                            <span className="block text-base font-bold text-ink">
+                              {d.despacho.id}
+                            </span>
+                            <span className="block truncate text-sm text-ink-3">
+                              {fmtNum(d.despacho.cantidad)} {d.material?.unidad} ·{' '}
+                              {d.etd ? fmtFechaCorta(d.etd) : '—'}
+                            </span>
+                          </button>
+                          <span
+                            className={cx(
+                              'shrink-0 whitespace-nowrap rounded-full px-2 py-[3px] text-xs font-semibold',
+                              completo
+                                ? 'bg-teal-50 text-teal-700'
+                                : iniciado
+                                  ? 'bg-ambar-50 text-ambar-700'
+                                  : 'bg-surface-3 text-ink-3',
+                            )}
+                          >
+                            {completo ? 'Completo' : iniciado ? 'En proceso' : 'Sin iniciar'}
+                          </span>
+                        </div>
+                      )
+                    })}
                   </li>
                 )
               })}
@@ -404,6 +515,90 @@ export default function Gestiones() {
                   ))}
                 </ol>
               </div>
+
+              {/* Acciones laterales: abren un panel a la vez, no navegan a otro lado */}
+              <div className="segbar w-full">
+                {[
+                  ['checklist', 'Checklist', LuListChecks],
+                  ['regimen', 'Régimen', LuFileText],
+                  ['eta', 'ETA', LuCalendarClock],
+                ].map(([id, rotulo, Icono]) => (
+                  <button
+                    key={id}
+                    onClick={() => setPanel(panel === id ? null : id)}
+                    className={cx('seg flex-1 justify-center', panel === id && 'seg-on')}
+                  >
+                    <Icono size={13} />
+                    {rotulo}
+                  </button>
+                ))}
+              </div>
+
+              {panel === 'checklist' && (
+                <div className="rounded-sm border border-line bg-surface-2 p-3">
+                  <div className="lbl mb-2">Avance de checklists</div>
+                  <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                    {seleccionadas.map((d) => (
+                      <li key={d.clave} className="flex items-center gap-2 text-sm">
+                        <span className="font-bold text-ink">{d.despacho.id}</span>
+                        <span className="ml-auto text-ink-3">
+                          Aduana{' '}
+                          <b className="num font-bold text-ink">
+                            {(d.despacho.aduana ?? []).filter(Boolean).length}/
+                            {(d.despacho.aduana ?? []).length}
+                          </b>
+                          {' · '}Logístico{' '}
+                          <b className="num font-bold text-ink">
+                            {(d.despacho.logistica ?? []).filter(Boolean).length}/
+                            {(d.despacho.logistica ?? []).length}
+                          </b>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-xs text-ink-3">Se marcan en el paso 3, Seguimiento.</p>
+                </div>
+              )}
+
+              {panel === 'regimen' && (
+                <div className="rounded-sm border border-line bg-surface-2 p-3">
+                  <Field
+                    label="Régimen aduanero"
+                    hint="Define el trámite y los impuestos aplicables."
+                  >
+                    <Select
+                      placeholder="Seleccionar…"
+                      options={REGIMENES}
+                      value={g.regimen}
+                      onChange={(e) => setG({ regimen: e.target.value })}
+                    />
+                  </Field>
+                </div>
+              )}
+
+              {panel === 'eta' && (
+                <div className="rounded-sm border border-line bg-surface-2 p-3">
+                  <div className="lbl mb-2">Fechas de la ruta</div>
+                  <ul className="m-0 flex list-none flex-col gap-1.5 p-0 text-sm">
+                    {[
+                      ['Salida proveedor', fila.etd],
+                      ['ETA frontera', fila.etd ? addDays(fila.etd, fila.ruta.leg1) : null],
+                      ['ETA planta', fila.planta],
+                    ].map(([rotulo, fecha]) => (
+                      <li key={rotulo} className="flex items-center gap-2">
+                        <span className="text-ink-2">{rotulo}</span>
+                        <span className="num ml-auto font-bold text-ink">
+                          {fecha ? fmtFechaCorta(fecha) : '—'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-xs text-ink-3">
+                    Tránsito total {fila.ruta.leg1 + fila.ruta.leg2} días por {fila.ruta.frontera}.
+                    Se reprograma en el paso 3.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -416,7 +611,11 @@ export default function Gestiones() {
               Extracción de {tab === 'factura' ? 'factura' : 'BL'}
             </span>
             <span className="ml-auto text-sm text-ink-3">
-              {fila.oc.id} · {fila.despacho.id}
+              {fila.oc.id} ·{' '}
+              <b className="font-bold text-ink">
+                {seleccionadas.map((d) => d.despacho.id).join(', ')}
+              </b>
+              {seleccionadas.length > 1 && ' · un solo trámite'}
             </span>
           </div>
 
@@ -463,6 +662,10 @@ export default function Gestiones() {
                   ))}
                   <CampoFijo label="RTN" valor="08019022438598" />
                   <CampoFijo label="Forma de pago" valor={fila.oc.condPago} />
+                  <CampoFijo
+                    label="Despachos"
+                    valor={seleccionadas.map((d) => d.despacho.id).join(', ')}
+                  />
                   {CAMPOS_FACTURA.slice(4).map((c) => (
                     <Campo
                       key={c.id}
@@ -703,7 +906,10 @@ export default function Gestiones() {
               variant="primary"
               disabled={!listo}
               onClick={() =>
-                avisar(`Despacho ${fila.oc.id} · ${fila.despacho.id} procesado.`, 'ok')
+                avisar(
+                  `OC ${fila.oc.id}: ${seleccionadas.length} despacho${seleccionadas.length === 1 ? '' : 's'} procesado${seleccionadas.length === 1 ? '' : 's'}.`,
+                  'ok',
+                )
               }
             >
               Procesar despacho
