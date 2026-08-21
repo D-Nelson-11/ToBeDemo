@@ -209,7 +209,7 @@ export default function ModalActualizarFechas({ filas, abierto, onClose, onListo
           <table className="tbl">
             <thead>
               <tr>
-                <th className="w-[180px]">N°</th>
+                <th className="w-[180px]">N</th>
                 <th className="w-[180px]">Orden de compra</th>
                 <th className="w-[140px]">Despacho</th>
                 <th>Proveedor</th>

@@ -23,12 +23,17 @@ pnpm dev
 
 ## Publicar
 
+Cada push a `main` dispara el workflow `.github/workflows/deploy.yml`, que compila
+y reemplaza la rama `gh-pages`. No hay que correr nada a mano.
+
+Para publicar desde la máquina sin pasar por el workflow:
+
 ```bash
 pnpm deploy
 ```
 
-Compila y publica `dist/` en la rama `gh-pages`. Usa `HashRouter` y `base: './'`,
-así que funciona desde un subdirectorio sin configuración extra.
+Usa `HashRouter` y `base: './'`, así que funciona desde un subdirectorio sin
+configuración extra.
 
 ## Dónde tocar las cosas
 
