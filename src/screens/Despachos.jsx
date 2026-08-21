@@ -213,6 +213,9 @@ export default function Despachos() {
               <Th campo="proveedor" className="min-w-[210px]">
                 Proveedor
               </Th>
+              <Th campo="incoterm" className="w-[92px]">
+                Incoterm
+              </Th>
               <th className="w-[128px]">Propuesta</th>
               <Th campo="fechaDoc" className="w-[104px]">
                 Fecha doc.
@@ -239,7 +242,7 @@ export default function Despachos() {
               <th>
                 <FiltroCol valor={qProv} onChange={setQProv} />
               </th>
-              <th colSpan={6} />
+              <th colSpan={7} />
               <th>
                 <FiltroCol valor={qResp} onChange={setQResp} />
               </th>
@@ -250,7 +253,7 @@ export default function Despachos() {
           <tbody>
             {filas.length === 0 && (
               <tr>
-                <td colSpan={12} className="h-[148px]! bg-surface text-center">
+                <td colSpan={13} className="h-[148px]! bg-surface text-center">
                   <span className="inline-flex flex-col items-center gap-[7px]">
                     <LuSearchX size={26} strokeWidth={1.5} className="text-navy-200" />
                     <span className="text-base font-semibold text-ink-2">Ninguna OC coincide</span>
@@ -308,6 +311,8 @@ export default function Despachos() {
                   <td className="cell-strong cell-cut" title={oc.proveedor}>
                     {oc.proveedor}
                   </td>
+
+                  <td>{oc.incoterm}</td>
 
                   <td>
                     {oc.sugerencia ? (

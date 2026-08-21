@@ -161,3 +161,84 @@ export const CATEGORIAS_IMPACTO = [
   'Cambio de ruta',
   'Otro',
 ]
+
+// ---------------------------------------------------------------------------
+// Requerimientos de aduana sugeridos. Se arman en tres capas: los que aplican a
+// toda importación, los que dependen de la categoría del SKU y los que dependen
+// del origen y del modo de transporte de la ruta.
+// ---------------------------------------------------------------------------
+const REQ_BASE = [
+  ['Declaración Única Centroamericana (DUCA)', 'Documento aduanero obligatorio para toda importación.', true],
+  ['Factura comercial', 'Es la base para la valoración en aduana.', true],
+  ['Documento de transporte (BL / AWB)', 'Acredita el contrato de transporte y la titularidad de la carga.', true],
+  ['Packing list', 'Detalle de bultos, pesos y contenido por contenedor.', false],
+]
+
+const REQ_CATEGORIA = {
+  'Papa y tubérculos': [
+    ['Permiso fitosanitario de importación (SENASA)', 'Debe emitirse antes del embarque, no al arribo.', true],
+    ['Certificado fitosanitario del país de origen', 'Emitido por la autoridad sanitaria del exportador.', true],
+    ['Declaración de tratamiento antibrote', 'Aplica a papa destinada a proceso industrial.', false],
+    ['Registro de importador de vegetales vigente', 'Se valida contra el RTN del importador.', false],
+  ],
+  'Frutas frescas': [
+    ['Permiso fitosanitario de importación (SENASA)', 'Producto vegetal fresco: requiere permiso previo.', true],
+    ['Certificado fitosanitario del país de origen', 'Debe coincidir con el lote declarado en factura.', true],
+    ['Registro de cadena de frío (termógrafo)', 'La inspección puede rechazar la carga sin evidencia de temperatura.', true],
+    ['Inspección en punto de ingreso', 'Coordinar con el inspector antes del arribo para no pagar demoras.', false],
+  ],
+  Aceites: [
+    ['Registro sanitario del producto (ARSA)', 'Sin registro vigente la mercancía no se nacionaliza.', true],
+    ['Certificado de libre venta del país de origen', 'Acredita comercialización legal en origen.', true],
+    ['Análisis de laboratorio del lote', 'Parámetros de acidez, humedad e impurezas.', false],
+    ['Ficha técnica y hoja de seguridad', 'Requerida para clasificación arancelaria.', false],
+  ],
+  Granos: [
+    ['Permiso fitosanitario de importación (SENASA)', 'Obligatorio para grano a granel.', true],
+    ['Certificado de fumigación', 'Con producto, dosis y fecha de aplicación.', true],
+    ['Análisis de micotoxinas', 'Aflatoxinas para maíz destinado a consumo o proceso.', true],
+  ],
+  'Empaque primario': [
+    ['Ficha técnica de material en contacto con alimentos', 'Debe declarar grado alimenticio.', true],
+    ['Declaración de conformidad FDA / UE', 'Respalda la inocuidad del material.', true],
+    ['Certificado de inocuidad del proveedor', 'Vigente al momento del embarque.', false],
+  ],
+  'Empaque secundario': [
+    ['Certificado de tratamiento NIMF-15', 'Obligatorio si viaja sobre tarima de madera.', true],
+    ['Ficha técnica del corrugado', 'Gramaje y resistencia declarados.', false],
+  ],
+}
+
+/**
+ * Requerimientos sugeridos para un SKU en una ruta dada.
+ * @returns [{ requisito, motivo, critico, fuente }]
+ */
+export function requisitosAduana(material, ruta) {
+  const arma = (lista, fuente) =>
+    lista.map(([requisito, motivo, critico]) => ({ requisito, motivo, critico, fuente }))
+
+  const porCategoria = REQ_CATEGORIA[material?.categoria] ?? []
+  const origen = ruta?.origen ?? ''
+  const esEeuu = /,\s*(CA|TX|FL)$/.test(origen)
+  const esTerrestre = /El Poy/i.test(ruta?.frontera ?? '')
+
+  const porRuta = []
+  if (esEeuu)
+    porRuta.push([
+      'Certificado de origen CAFTA-DR',
+      `Mercancía de ${origen}: habilita la preferencia arancelaria.`,
+      false,
+    ])
+  if (esTerrestre)
+    porRuta.push([
+      'Declaración de tránsito terrestre',
+      `Cruce por ${ruta.frontera}: requiere el tránsito abierto antes de llegar.`,
+      true,
+    ])
+
+  return [
+    ...arma(REQ_BASE, 'Toda importación'),
+    ...arma(porCategoria, material?.categoria ?? 'Categoría del SKU'),
+    ...arma(porRuta, 'Ruta y origen'),
+  ]
+}

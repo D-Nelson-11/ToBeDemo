@@ -13,6 +13,7 @@ export const PASOS = [
   { paso: 1, to: '/orden-compra', titulo: 'Crear Orden de Compra' },
   { paso: 2, to: '/despachos', titulo: 'Crear Despacho' },
   { paso: 3, to: '/seguimiento', titulo: 'Seguimiento de Despacho' },
+  { paso: 4, to: '/gestiones', titulo: 'Crear Gestiones' },
 ]
 
 const AVISO = {

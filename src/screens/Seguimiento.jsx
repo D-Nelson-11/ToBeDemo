@@ -1,10 +1,18 @@
 import { useMemo, useState } from 'react'
-import { LuCalendarClock, LuClipboardCheck, LuFileDown, LuShip, LuTriangleAlert, LuX } from 'react-icons/lu'
+import {
+  LuCalendarClock,
+  LuClipboardCheck,
+  LuFileDown,
+  LuInfo,
+  LuShip,
+  LuSparkles,
+  LuTriangleAlert,
+} from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
 import { Select } from '../components/ui/Field'
 import ModalActualizarFechas from './ModalActualizarFechas'
 import { useOc } from '../data/store'
-import { CHECK_ADUANA, CHECK_LOGISTICA, INCOTERMS, RUTAS } from '../data/catalogos'
+import { CHECK_ADUANA, CHECK_LOGISTICA, INCOTERMS, RUTAS, requisitosAduana } from '../data/catalogos'
 import { addDays, desdeHoy, diasEntre, fmtFechaCorta, fmtNum, hoy, parseISO } from '../lib/fechas'
 
 const LISTAS = [
@@ -53,25 +61,6 @@ function construirFilas(ordenes) {
   ordenes
     .filter((oc) => oc.activa)
     .forEach((oc) => {
-      if (!oc.despachos.length) {
-        // Una OC abierta sin despachos también es seguimiento: es lo que falta programar.
-        if (oc.estado === 'abierta') {
-          filas.push({
-            clave: `${oc.id}-sin`,
-            oc,
-            despacho: null,
-            material: oc.materiales[0],
-            etd: null,
-            frontera: null,
-            planta: null,
-            hechos: 0,
-            alerta: { tono: 'gris', texto: 'Sin programar' },
-            tarea: 'Programar despachos de la OC',
-          })
-        }
-        return
-      }
-
       oc.despachos.forEach((d) => {
         const ruta = RUTAS[d.ruta] ?? RUTAS.longbeach
         const etd = parseISO(d.salida)
@@ -121,6 +110,67 @@ function construirFilas(ordenes) {
   return filas
 }
 
+/**
+ * Requerimientos de aduana sugeridos para el SKU del despacho. Es una ayuda,
+ * no una autorización: por eso va separado de los checklists que sí se marcan.
+ */
+function SugerenciaAduana({ material, ruta }) {
+  const requisitos = useMemo(() => requisitosAduana(material, ruta), [material, ruta])
+  const fuentes = [...new Set(requisitos.map((r) => r.fuente))]
+  const criticos = requisitos.filter((r) => r.critico).length
+
+  return (
+    <div className="panel">
+      <div className="panel-head">
+        <span className="panel-title">
+          <LuSparkles size={14} />
+          Sugerencia de IA · Requerimientos de aduana
+        </span>
+        <span className="ml-auto flex items-center gap-2 text-sm text-ink-3">
+          <span className="rounded-full bg-navy-50 px-2 py-[3px] text-xs font-bold text-navy-700">
+            {material?.codigo}
+          </span>
+          <span className="hidden sm:inline">{material?.categoria}</span>
+          <span className="num rounded-full bg-ambar-50 px-2 py-[3px] text-xs font-bold text-ambar-700">
+            {criticos} críticos
+          </span>
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-x-6 gap-y-4 p-4 lg:grid-cols-2">
+        {fuentes.map((fuente) => (
+          <div key={fuente}>
+            <div className="lbl mb-2">{fuente}</div>
+            <ul className="m-0 flex list-none flex-col gap-2 p-0">
+              {requisitos
+                .filter((r) => r.fuente === fuente)
+                .map((r) => (
+                  <li key={r.requisito} className="flex gap-2.5">
+                    {r.critico ? (
+                      <LuTriangleAlert size={14} className="mt-px shrink-0 text-ambar-600" />
+                    ) : (
+                      <LuInfo size={14} className="mt-px shrink-0 text-ink-4" />
+                    )}
+                    <span className="min-w-0">
+                      <span className="block text-base font-bold text-ink">{r.requisito}</span>
+                      <span className="block text-sm text-ink-3 text-pretty">{r.motivo}</span>
+                    </span>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      <p className="flex items-start gap-2 border-t border-line bg-surface-2 px-4 py-2.5 text-sm text-ink-3">
+        <LuInfo size={13} className="mt-px shrink-0" />
+        Generado a partir de la categoría del SKU, el origen y el modo de transporte de la ruta.
+        Validalo con el agente aduanero antes de presentar el trámite.
+      </p>
+    </div>
+  )
+}
+
 function Avance({ marcas = [], tono }) {
   const hechos = marcas.filter(Boolean).length
   const pct = marcas.length ? (hechos / marcas.length) * 100 : 0
@@ -160,8 +210,7 @@ export default function Seguimiento() {
   // detalle refleja los cambios de checklist sin guardar una copia congelada.
   const actual = filas.find((f) => f.clave === seleccion) ?? filas[0] ?? null
 
-  // Solo se puede reprogramar lo que ya tiene despacho: las filas 'sin programar' no.
-  const marcables = filas.filter((f) => f.despacho)
+  const marcables = filas
   const filasMarcadas = marcables.filter((f) => marcados.has(f.clave))
   const todosMarcados = marcables.length > 0 && filasMarcadas.length === marcables.length
 
@@ -178,7 +227,7 @@ export default function Seguimiento() {
   const conteo = useMemo(() => {
     const c = { rojo: 0, ambar: 0, teal: 0, gris: 0 }
     todas.forEach((f) => {
-      if (f.alerta.texto !== 'Recibido') c[f.alerta.tono] += 1
+      c[f.alerta.tono] += 1
     })
     return c
   }, [todas])
@@ -201,7 +250,7 @@ export default function Seguimiento() {
               ['rojo', 'Retrasado'],
               ['ambar', 'Por vencer'],
               ['teal', 'En tiempo'],
-              ['gris', 'Sin programar'],
+              ['gris', 'Recibido'],
             ].map(([tono, rotulo]) => (
               <span key={tono} className="flex items-center gap-1.5">
                 <span className={cx('h-2 w-2 rounded-full', TONOS[tono].punto)} />
@@ -221,7 +270,7 @@ export default function Seguimiento() {
             />
             <Select
               placeholder="Todas las alertas"
-              options={['Retrasado', 'Por vencer', 'En tiempo', 'Sin programar', 'Recibido']}
+              options={['Retrasado', 'Por vencer', 'En tiempo', 'Recibido']}
               value={fAlerta}
               onChange={(e) => setFAlerta(e.target.value)}
               className="w-[170px]"
@@ -321,13 +370,12 @@ export default function Seguimiento() {
                           type="checkbox"
                           className="chk"
                           aria-label={`Seleccionar ${f.oc.id} ${f.despacho?.id ?? ''}`}
-                          disabled={!f.despacho}
                           checked={marcados.has(f.clave)}
                           onChange={() => alternar(f.clave)}
                         />
                       </td>
                       <td className="cell-key">{f.oc.id}</td>
-                      <td className="cell-strong">{f.despacho?.id ?? '—'}</td>
+                      <td className="cell-strong">{f.despacho.id}</td>
                       <td className="cell-cut" title={f.material?.nombre}>
                         <span className="text-ink-3">{f.material?.codigo}</span> · {f.material?.nombre}
                       </td>
@@ -338,20 +386,12 @@ export default function Seguimiento() {
                       <td className="num">{f.frontera ? fmtFechaCorta(f.frontera) : '—'}</td>
                       <td className="num">{f.planta ? fmtFechaCorta(f.planta) : '—'}</td>
                       <td>
-                        {f.despacho ? (
-                          <Avance marcas={f.despacho.aduana} tono={f.alerta.tono} />
-                        ) : (
-                          <span className="text-ink-4">—</span>
-                        )}
+                        <Avance marcas={f.despacho.aduana} tono={f.alerta.tono} />
                       </td>
                       <td>
-                        {f.despacho ? (
-                          <Avance marcas={f.despacho.logistica} tono={f.alerta.tono} />
-                        ) : (
-                          <span className="text-ink-4">—</span>
-                        )}
+                        <Avance marcas={f.despacho.logistica} tono={f.alerta.tono} />
                       </td>
-                      <td className={cx('cell-cut', !f.despacho && 'text-ink-3')} title={f.tarea}>
+                      <td className="cell-cut" title={f.tarea}>
                         {f.tarea}
                         {f.etd && (
                           <span className="ml-1.5 text-xs text-ink-4">· {desdeHoy(f.etd)}</span>
@@ -382,21 +422,18 @@ export default function Seguimiento() {
                 <span>
                   Detalle{' '}
                   <b className="font-bold text-ink">
-                    {actual.oc.id}
-                    {actual.despacho ? ` · ${actual.despacho.id}` : ''}
+                    {actual.oc.id} · {actual.despacho.id}
                   </b>{' '}
                   · seleccionado
                 </span>
                 <span className="text-ink-4">{actual.oc.proveedor}</span>
-                {actual.despacho && (
-                  <span className="text-ink-4">
-                    · {fmtNum(actual.despacho.cantidad)} {actual.material?.unidad} ·{' '}
-                    {actual.ruta?.origen} → {actual.ruta?.frontera}
-                  </span>
-                )}
+                <span className="text-ink-4">
+                  · {fmtNum(actual.despacho.cantidad)} {actual.material?.unidad} ·{' '}
+                  {actual.ruta?.origen} → {actual.ruta?.frontera}
+                </span>
               </div>
 
-              {actual.despacho ? (
+              <div className="flex flex-col gap-3">
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   {LISTAS.map(({ clave, titulo, items }) => {
                     const marcas = actual.despacho[clave] ?? []
@@ -436,13 +473,9 @@ export default function Seguimiento() {
                     )
                   })}
                 </div>
-              ) : (
-                <div className="panel flex items-center gap-2.5 p-4 text-sm text-ink-2">
-                  <LuX size={15} className="shrink-0 text-ink-4" />
-                  Esta OC todavía no tiene despachos programados, así que no hay checklists que
-                  seguir. Programala en el paso 2.
-                </div>
-              )}
+
+                <SugerenciaAduana material={actual.material} ruta={actual.ruta} />
+              </div>
             </div>
           )}
         </div>
