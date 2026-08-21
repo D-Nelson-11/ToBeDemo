@@ -34,6 +34,28 @@ function reducer(state, action) {
             }
           : oc,
       )
+    // Reprograma varios despachos de una sola vez. Guarda la fecha planificada
+    // original la primera vez, para poder mostrar siempre la variación contra el plan.
+    case 'reprogramar':
+      return state.map((oc) => {
+        const cambios = action.cambios.filter((c) => c.ocId === oc.id)
+        if (!cambios.length) return oc
+        return {
+          ...oc,
+          despachos: oc.despachos.map((d) => {
+            const c = cambios.find((x) => x.despachoId === d.id)
+            if (!c) return d
+            return {
+              ...d,
+              salidaPlan: d.salidaPlan ?? d.salida,
+              salida: c.salida,
+              causa: action.causa,
+              categoria: action.categoria,
+              notificado: action.notificar || d.notificado,
+            }
+          }),
+        }
+      })
     case 'marcar-check':
       return state.map((oc) =>
         oc.id === action.ocId
@@ -80,6 +102,7 @@ export function OcProvider({ children }) {
       agregarDespachos: (id, despachos) => dispatch({ type: 'agregar-despachos', id, despachos }),
       marcarCheck: (ocId, despachoId, lista, idx) =>
         dispatch({ type: 'marcar-check', ocId, despachoId, lista, idx }),
+      reprogramar: (cambios, meta) => dispatch({ type: 'reprogramar', cambios, ...meta }),
     }),
     [ordenes, avisos, avisar],
   )

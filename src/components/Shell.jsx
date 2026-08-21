@@ -34,14 +34,13 @@ export default function Shell() {
       {/* Banda superior del portal: marca a la izquierda, usuario a la derecha */}
       <header className="shrink-0 bg-head text-white">
         <div className="contenedor flex h-11 items-center gap-3">
-        <h1 className="text-lg font-normal">Portal de Abastecimiento</h1>
+        <h1 className="text-lg font-normal">Portal</h1>
 
         <div className="flex-1" />
 
-        <span className="hidden text-xs text-white/70 sm:inline">Corporación Dinant S.A</span>
         <span className="hidden text-white/25 sm:inline">|</span>
         <span className="hidden text-sm sm:inline">
-          Bienvenido <strong className="font-semibold">David Nelson</strong>
+          Bienvenido <strong className="font-semibold">User</strong>
         </span>
         <button
           title="Salir"

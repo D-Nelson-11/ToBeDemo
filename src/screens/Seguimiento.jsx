@@ -1,13 +1,8 @@
 import { useMemo, useState } from 'react'
-import {
-  LuClipboardCheck,
-  LuFileDown,
-  LuShip,
-  LuTriangleAlert,
-  LuX,
-} from 'react-icons/lu'
+import { LuCalendarClock, LuClipboardCheck, LuFileDown, LuShip, LuTriangleAlert, LuX } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
 import { Select } from '../components/ui/Field'
+import ModalActualizarFechas from './ModalActualizarFechas'
 import { useOc } from '../data/store'
 import { CHECK_ADUANA, CHECK_LOGISTICA, INCOTERMS, RUTAS } from '../data/catalogos'
 import { addDays, desdeHoy, diasEntre, fmtFechaCorta, fmtNum, hoy, parseISO } from '../lib/fechas'
@@ -146,6 +141,8 @@ export default function Seguimiento() {
   const [fIncoterm, setFIncoterm] = useState('')
   const [fAlerta, setFAlerta] = useState('')
   const [seleccion, setSeleccion] = useState(null)
+  const [marcados, setMarcados] = useState(() => new Set())
+  const [reprogramando, setReprogramando] = useState(false)
 
   const todas = useMemo(() => construirFilas(ordenes), [ordenes])
 
@@ -162,6 +159,21 @@ export default function Seguimiento() {
   // La fila seleccionada se resuelve por clave contra la lista viva, así el
   // detalle refleja los cambios de checklist sin guardar una copia congelada.
   const actual = filas.find((f) => f.clave === seleccion) ?? filas[0] ?? null
+
+  // Solo se puede reprogramar lo que ya tiene despacho: las filas 'sin programar' no.
+  const marcables = filas.filter((f) => f.despacho)
+  const filasMarcadas = marcables.filter((f) => marcados.has(f.clave))
+  const todosMarcados = marcables.length > 0 && filasMarcadas.length === marcables.length
+
+  const alternar = (clave) =>
+    setMarcados((prev) => {
+      const s = new Set(prev)
+      s.has(clave) ? s.delete(clave) : s.add(clave)
+      return s
+    })
+
+  const alternarTodos = (v) =>
+    setMarcados(v ? new Set(marcables.map((f) => f.clave)) : new Set())
 
   const conteo = useMemo(() => {
     const c = { rojo: 0, ambar: 0, teal: 0, gris: 0 }
@@ -224,11 +236,45 @@ export default function Seguimiento() {
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="contenedor flex flex-col gap-4 py-5">
+          {/* Aparece solo cuando hay algo marcado: la acción sigue a la selección */}
+          {filasMarcadas.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 rounded-sm border border-navy-200 bg-navy-50 px-4 py-2.5">
+              <span className="text-base text-ink-2">
+                <b className="num font-bold text-navy-800">{filasMarcadas.length}</b> despacho
+                {filasMarcadas.length === 1 ? '' : 's'} seleccionado
+                {filasMarcadas.length === 1 ? '' : 's'}
+              </span>
+              <Button variant="link" onClick={() => alternarTodos(false)}>
+                Quitar selección
+              </Button>
+              <div className="ml-auto">
+                <Button variant="primary" onClick={() => setReprogramando(true)}>
+                  <LuCalendarClock size={14} />
+                  Actualizar fecha despacho
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* --- tabla de programación --- */}
           <div className="panel tabla-scroll">
             <table className="tbl">
               <thead>
                 <tr>
+                  <th className="w-9">
+                    <input
+                      type="checkbox"
+                      className="chk"
+                      aria-label="Seleccionar todos"
+                      checked={todosMarcados}
+                      ref={(el) => {
+                        if (el)
+                          el.indeterminate =
+                            filasMarcadas.length > 0 && filasMarcadas.length < marcables.length
+                      }}
+                      onChange={(e) => alternarTodos(e.target.checked)}
+                    />
+                  </th>
                   <th className="w-[104px]">OC</th>
                   <th className="w-[92px]">Despacho</th>
                   <th className="min-w-[190px]">Cat / SKU</th>
@@ -245,7 +291,7 @@ export default function Seguimiento() {
               <tbody>
                 {filas.length === 0 && (
                   <tr>
-                    <td colSpan={11} className="h-[148px]! bg-surface text-center">
+                    <td colSpan={12} className="h-[148px]! bg-surface text-center">
                       <span className="inline-flex flex-col items-center gap-[7px]">
                         <LuShip size={26} strokeWidth={1.5} className="text-navy-200" />
                         <span className="text-base font-semibold text-ink-2">
@@ -270,6 +316,16 @@ export default function Seguimiento() {
                       style={{ '--spine': tono.lomo }}
                       className={cx('cursor-pointer', sel && '[&>td]:bg-navy-50!')}
                     >
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          className="chk"
+                          aria-label={`Seleccionar ${f.oc.id} ${f.despacho?.id ?? ''}`}
+                          disabled={!f.despacho}
+                          checked={marcados.has(f.clave)}
+                          onChange={() => alternar(f.clave)}
+                        />
+                      </td>
                       <td className="cell-key">{f.oc.id}</td>
                       <td className="cell-strong">{f.despacho?.id ?? '—'}</td>
                       <td className="cell-cut" title={f.material?.nombre}>
@@ -391,6 +447,13 @@ export default function Seguimiento() {
           )}
         </div>
       </div>
+
+      <ModalActualizarFechas
+        abierto={reprogramando}
+        filas={filasMarcadas}
+        onClose={() => setReprogramando(false)}
+        onListo={() => setMarcados(new Set())}
+      />
     </div>
   )
 }

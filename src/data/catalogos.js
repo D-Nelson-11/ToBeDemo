@@ -145,3 +145,19 @@ export const CHECK_LOGISTICA = [
   'BL confirmado',
   'Transporte interno coordinado',
 ]
+
+// ---------------------------------------------------------------------------
+// Reprogramación: por qué se movió la fecha. La categoría es la etiqueta corta
+// que se reporta; la causa es el detalle que escribe quien hace el cambio.
+// ---------------------------------------------------------------------------
+export const CATEGORIAS_IMPACTO = [
+  'Atraso en producción',
+  'Falta de contenedor',
+  'Atraso de la naviera',
+  'Retención en aduana',
+  'Clima / fuerza mayor',
+  'Documentación incompleta',
+  'Cambio solicitado por planta',
+  'Cambio de ruta',
+  'Otro',
+]
