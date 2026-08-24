@@ -1,5 +1,5 @@
-import { RUTAS } from '../data/catalogos'
-import { addDays, diasEntre, hoy, parseISO } from './fechas'
+import { HITOS_ADUANA, RUTAS } from '../data/catalogos'
+import { addDays, diasEntre, fmtDuracion, hoy, parseISO } from './fechas'
 
 // Segmentos del viaje. Son los mismos botones de la torre y salen de comparar
 // la fecha de hoy contra los hitos de la ruta, no de un campo de estado.
@@ -223,36 +223,96 @@ export function requisitosDestino(embarque) {
   ]
 }
 
-export const ETAPAS_TRAMITE = [
-  'ETA ingresada',
-  'Revisión documental',
-  'Verificación de peso',
-  'Selectivo',
-  'Pago de impuestos',
-  'Liberación / salida',
-]
+// --- Trámite en la aduana de destino ---------------------------------------
+// Seis hitos con un SLA entre cada par (HITOS_ADUANA, en catalogos.js). En qué
+// hito va sigue saliendo de los checklists del paso 3, para no inventar un
+// segundo estado; lo que se agrega acá son los tiempos y el semáforo.
 
-/** En qué etapa del trámite va, según cuántos requisitos están cumplidos. */
+const HORA_MS = 3600000
+export const ETAPAS_TRAMITE = HITOS_ADUANA.map((h) => h.rotulo)
+
+/** En qué hito del trámite va, según cuántos requisitos están cumplidos. */
 export function etapaTramite(embarque) {
   const grupos = requisitosDestino(embarque)
   const items = grupos.flatMap((g) => g.items)
   const hechos = items.filter(([, ok]) => ok).length
   return Math.min(
-    ETAPAS_TRAMITE.length - 1,
-    Math.floor((hechos / items.length) * ETAPAS_TRAMITE.length),
+    HITOS_ADUANA.length - 1,
+    Math.floor((hechos / items.length) * HITOS_ADUANA.length),
   )
 }
 
-export const ESTATUS_ADUANA = [
-  'Trámite en sitio',
-  'Selectivo',
-  'Pago de impuestos',
-  'Listo para liquidar',
-  'Liberación',
-]
+/** Fracción determinista dentro de [min, max] — los mocks no cambian por render. */
+function fraccion(s, min, max) {
+  return min + ((s % 97) / 97) * (max - min)
+}
 
+/**
+ * Los seis hitos con su hora, su límite de SLA y el estado del semáforo.
+ * Las horas son mock y se calculan HACIA ATRÁS desde `ahora`: así el hito en
+ * curso siempre cae cerca de su vencimiento, que es lo que la demo debe mostrar.
+ */
+export function tramiteAduana(embarque, ahora = new Date()) {
+  const actual = etapaTramite(embarque)
+  const s = semilla(embarque.clave)
+  const marcas = new Array(HITOS_ADUANA.length).fill(null)
+
+  if (actual >= 1) {
+    // Cuánto del SLA lleva consumido el tramo en curso: 0.45 a 1.4 reparte
+    // verdes, amarillos y rojos entre los embarques sin tener que sortearlos.
+    const consumido = fraccion(s, 0.45, 1.4) * HITOS_ADUANA[actual].sla
+    marcas[actual - 1] = new Date(ahora.getTime() - consumido * HORA_MS)
+    for (let k = actual - 1; k >= 1; k--) {
+      const real = fraccion(s >> k, 0.55, 1.25) * HITOS_ADUANA[k].sla
+      marcas[k - 1] = new Date(marcas[k].getTime() - real * HORA_MS)
+    }
+  }
+
+  return HITOS_ADUANA.map((h, i) => {
+    const limite =
+      i >= 1 && marcas[i - 1] ? new Date(marcas[i - 1].getTime() + h.sla * HORA_MS) : null
+    const base = { ...h, indice: i, ts: marcas[i], limite, curso: i === actual }
+
+    // Pendiente: todavía no le toca, solo se anuncia su SLA.
+    if (i > actual) return { ...base, estado: 'pendiente', nota: `SLA ${h.sla} h` }
+
+    // El primer hito abre el reloj, no tiene SLA contra el cual medirse.
+    if (i === 0) {
+      return actual === 0
+        ? { ...base, estado: 'pendiente', nota: 'en curso' }
+        : { ...base, estado: 'ok', nota: '' }
+    }
+
+    const holgura = ((limite?.getTime() ?? 0) - (base.curso ? ahora : marcas[i]).getTime()) / 60000
+    const margen = h.sla * 60 * (base.curso ? 0.25 : 0.15) // amarillo dentro de este resto
+
+    if (holgura < 0)
+      return {
+        ...base,
+        estado: 'vencido',
+        minutos: holgura,
+        nota: `${base.curso ? 'vencido ' : ''}+${fmtDuracion(holgura)}${base.curso ? '' : ' tarde'}`,
+      }
+    return {
+      ...base,
+      estado: holgura <= margen ? 'riesgo' : 'ok',
+      minutos: holgura,
+      nota: base.curso ? `vence en ${fmtDuracion(holgura)}` : `${fmtDuracion(holgura)} antes`,
+    }
+  })
+}
+
+/** El hito donde está parado el embarque; es lo que va en el chip de la tarjeta. */
 export function estatusAduana(embarque) {
-  return ESTATUS_ADUANA[Math.min(ESTATUS_ADUANA.length - 1, etapaTramite(embarque))]
+  return HITOS_ADUANA[etapaTramite(embarque)].rotulo
+}
+
+/** El peor estado del trámite: manda el color del chip. */
+export function estadoTramite(embarque, ahora) {
+  const hitos = tramiteAduana(embarque, ahora)
+  const enCurso = hitos.find((h) => h.curso) ?? hitos[hitos.length - 1]
+  if (hitos.some((h) => h.estado === 'vencido')) return 'vencido'
+  return enCurso.estado === 'pendiente' ? 'ok' : enCurso.estado
 }
 
 export function prioridadDe(embarque) {

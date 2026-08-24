@@ -72,3 +72,23 @@ export function fmtMoneda(n, moneda = 'USD') {
   const simbolo = moneda === 'HNL' ? 'L' : moneda === 'EUR' ? '€' : '$'
   return `${simbolo} ${n.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
+
+/** 14/08 09:12 — el trámite de aduana se mide en horas, no en días */
+export function fmtFechaHora(value) {
+  const d = value instanceof Date ? value : parseISO(value)
+  if (!d) return '—'
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${String(
+    d.getHours(),
+  ).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+/** Duración en minutos a "2d 4h" / "6h 15m" / "45m". Siempre en valor absoluto. */
+export function fmtDuracion(minutos) {
+  const m = Math.abs(Math.round(minutos ?? 0))
+  const dias = Math.floor(m / 1440)
+  const horas = Math.floor((m % 1440) / 60)
+  const min = m % 60
+  if (dias) return horas ? `${dias}d ${horas}h` : `${dias}d`
+  if (horas) return min ? `${horas}h ${min}m` : `${horas}h`
+  return `${min}m`
+}

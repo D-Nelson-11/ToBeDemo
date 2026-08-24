@@ -15,19 +15,19 @@ import {
 import Modal from '../components/ui/Modal'
 import Button, { cx } from '../components/ui/Button'
 import { Select } from '../components/ui/Field'
+import RielAduana from '../components/RielAduana'
 import RielTransito from '../components/RielTransito'
 import { useOc } from '../data/store'
 import {
   CAUSAS_COSTO,
-  ETAPAS_TRAMITE,
   NIVELES,
   RIESGOS,
   SEGMENTOS,
   construirAlertas,
   construirCostos,
   construirEmbarques,
+  estadoTramite,
   estatusAduana,
-  etapaTramite,
   prioridadDe,
   requisitosDestino,
 } from '../lib/torre'
@@ -47,6 +47,12 @@ const TONO_RIESGO = {
   'Dentro de tiempo': { chip: 'bg-teal-50 text-teal-700', punto: 'bg-teal-600', texto: 'text-teal-700', lomo: 'var(--color-teal-600)' },
   'En riesgo': { chip: 'bg-ambar-50 text-ambar-700', punto: 'bg-ambar-500', texto: 'text-ambar-700', lomo: 'var(--color-ambar-500)' },
   'Fuera de tiempo': { chip: 'bg-rojo-50 text-rojo-700', punto: 'bg-rojo-600', texto: 'text-rojo-700', lomo: 'var(--color-rojo-600)' },
+}
+
+const TONO_SLA = {
+  ok: 'bg-teal-50 text-teal-700',
+  riesgo: 'bg-ambar-50 text-ambar-700',
+  vencido: 'bg-rojo-50 text-rojo-700',
 }
 
 const TONO_NIVEL = {
@@ -360,7 +366,6 @@ export default function Torre() {
                 )}
                 {enAduana.map((e, i) => {
                   const grupos = requisitosDestino(e)
-                  const etapa = etapaTramite(e)
                   const tono = TONO_RIESGO[e.riesgo]
                   return (
                     <div key={e.clave} className="panel">
@@ -381,7 +386,7 @@ export default function Torre() {
                           <span
                             className={cx(
                               'rounded-full px-2.5 py-[3px] text-xs font-semibold',
-                              tono.chip,
+                              TONO_SLA[estadoTramite(e)],
                             )}
                           >
                             {estatusAduana(e)}
@@ -412,29 +417,9 @@ export default function Torre() {
                         ))}
                       </div>
 
-                      {/* Línea del trámite en aduana */}
-                      <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-line bg-surface-2 px-4 py-3">
-                        {ETAPAS_TRAMITE.map((et, j) => (
-                          <span
-                            key={et}
-                            className={cx(
-                              'flex items-center gap-2 text-sm',
-                              j < etapa ? 'text-teal-700' : j === etapa ? 'font-bold text-navy-800' : 'text-ink-4',
-                            )}
-                          >
-                            <span
-                              className={cx(
-                                'h-2 w-2 rounded-full',
-                                j < etapa
-                                  ? 'bg-teal-600'
-                                  : j === etapa
-                                    ? 'bg-navy-800 ring-2 ring-navy-200'
-                                    : 'bg-line-strong',
-                              )}
-                            />
-                            {et}
-                          </span>
-                        ))}
+                      {/* Trámite en aduana: un SLA entre cada hito */}
+                      <div className="border-t border-line bg-surface-2 px-4 py-3">
+                        <RielAduana embarque={e} />
                       </div>
                     </div>
                   )
@@ -614,28 +599,7 @@ export default function Torre() {
 
             <div className="panel p-4">
               <div className="lbl mb-3">Trámite en aduana de destino</div>
-              <div className="flex flex-wrap gap-x-6 gap-y-2">
-                {ETAPAS_TRAMITE.map((et, j) => {
-                  const etapa = etapaTramite(detalle)
-                  return (
-                    <span
-                      key={et}
-                      className={cx(
-                        'flex items-center gap-2 text-sm',
-                        j < etapa ? 'text-teal-700' : j === etapa ? 'font-bold text-navy-800' : 'text-ink-4',
-                      )}
-                    >
-                      <span
-                        className={cx(
-                          'h-2 w-2 rounded-full',
-                          j < etapa ? 'bg-teal-600' : j === etapa ? 'bg-navy-800 ring-2 ring-navy-200' : 'bg-line-strong',
-                        )}
-                      />
-                      {et}
-                    </span>
-                  )
-                })}
-              </div>
+              <RielAduana embarque={detalle} leyenda />
             </div>
 
             <div className="panel p-4">

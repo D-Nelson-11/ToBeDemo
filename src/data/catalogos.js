@@ -251,3 +251,15 @@ export const REGIMENES = [
   'Zona libre',
   'Reimportación',
 ]
+
+// Hitos del trámite en la aduana de destino, en orden. El SLA de cada uno es el
+// tiempo máximo desde el hito anterior; el primero abre el reloj y por eso va sin
+// SLA. Cambiar un número acá cambia el semáforo de la torre, no hay otro lugar.
+export const HITOS_ADUANA = [
+  { rotulo: 'Listo para liquidar', corto: 'Listo p/liquidar', sla: null },
+  { rotulo: 'Liquidado', corto: 'Liquidado', sla: 8 },
+  { rotulo: 'Pago de impuestos', corto: 'Pago impuestos', sla: 24 },
+  { rotulo: 'Selectivo', corto: 'Selectivo', sla: 4 },
+  { rotulo: 'Trámite en sitio', corto: 'Trámite en sitio', sla: 6 },
+  { rotulo: 'Liberado', corto: 'Liberado', sla: 4 },
+]
