@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
+  LuBriefcase,
   LuCheck,
+  LuChevronDown,
   LuCircleAlert,
   LuCircleCheck,
   LuLogOut,
@@ -9,6 +11,7 @@ import {
   LuPanelLeftOpen,
   LuTowerControl,
   LuTriangleAlert,
+  LuUserCog,
   LuWorkflow,
 } from 'react-icons/lu'
 import { useOc } from '../data/store'
@@ -41,18 +44,131 @@ export const MODULOS = [
   },
 ]
 
+// Cada vista es un portal distinto: cambia el sidebar entero, no solo el permiso.
+// La de cliente todavía no tiene módulos — cuando los tenga, se agregan acá.
+export const VISTAS = [
+  {
+    id: 'especialista',
+    rotulo: 'Vista especialista',
+    usuario: 'User',
+    area: 'Abastecimiento',
+    icono: LuUserCog,
+    modulos: MODULOS,
+  },
+  {
+    id: 'cliente',
+    rotulo: 'Vista cliente',
+    usuario: 'User',
+    area: 'Cliente',
+    icono: LuBriefcase,
+    modulos: [],
+  },
+]
+
 const AVISO = {
   ok: { icono: LuCircleCheck, color: 'text-teal-100' },
   alerta: { icono: LuTriangleAlert, color: 'text-ambar-100' },
   rojo: { icono: LuCircleAlert, color: 'text-rojo-100' },
 }
 
+/** Selector de vista: es el "cambiar usuario" del header. */
+function MenuUsuario({ vista, onCambiar }) {
+  const [abierto, setAbierto] = useState(false)
+  const caja = useRef(null)
+
+  // Sin el clic afuera el menú se queda abierto encima del contenido.
+  useEffect(() => {
+    if (!abierto) return
+    const fuera = (e) => {
+      if (!caja.current?.contains(e.target)) setAbierto(false)
+    }
+    document.addEventListener('mousedown', fuera)
+    return () => document.removeEventListener('mousedown', fuera)
+  }, [abierto])
+
+  return (
+    <div className="relative" ref={caja}>
+      <button
+        onClick={() => setAbierto((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={abierto}
+        title="Cambiar usuario"
+        className={cx(
+          'flex items-center gap-2 rounded-sm border px-2 py-1 transition-colors duration-100',
+          abierto ? 'border-line-strong bg-surface-2' : 'border-transparent hover:bg-surface-2',
+        )}
+      >
+        <span className="hidden flex-col items-end whitespace-nowrap leading-tight sm:flex">
+          <span className="text-base font-bold text-ink">{vista.usuario}</span>
+          <span className="text-sm text-ink-3">{vista.area}</span>
+        </span>
+        <LuChevronDown
+          size={15}
+          className={cx('shrink-0 text-ink-3 transition-transform duration-150', abierto && 'rotate-180')}
+        />
+      </button>
+
+      {abierto && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-50 mt-1.5 w-64 overflow-hidden rounded-sm border border-line bg-surface shadow-[0_14px_32px_-12px_rgba(0,28,44,0.45)]"
+        >
+          <div className="lbl border-b border-line px-3 py-2">Cambiar usuario</div>
+          {VISTAS.map((v) => {
+            const activa = v.id === vista.id
+            const Icono = v.icono
+            return (
+              <button
+                key={v.id}
+                role="menuitem"
+                onClick={() => {
+                  onCambiar(v.id)
+                  setAbierto(false)
+                }}
+                className={cx(
+                  'flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors duration-100',
+                  activa ? 'bg-navy-50' : 'hover:bg-surface-2',
+                )}
+              >
+                <Icono size={17} strokeWidth={1.9} className="shrink-0 text-navy-700" />
+                <span className="min-w-0 flex-1 leading-tight">
+                  <span className={cx('block text-sm', activa ? 'font-bold text-navy-800' : 'text-ink')}>
+                    {v.rotulo}
+                  </span>
+                  <span className="block text-xs text-ink-3">{v.usuario} · {v.area}</span>
+                </span>
+                {activa && <LuCheck size={15} strokeWidth={2.6} className="shrink-0 text-teal-600" />}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Lo que se ve mientras una vista no tenga módulos. */
+function SinModulos({ vista }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+      <vista.icono size={30} strokeWidth={1.6} className="text-ink-4" />
+      <span className="text-lg font-bold text-navy-800">{vista.rotulo}</span>
+      <span className="max-w-sm text-sm text-ink-3">
+        Todavía no tiene módulos habilitados. Cambiá de usuario desde el menú del encabezado.
+      </span>
+    </div>
+  )
+}
+
 export default function Shell() {
   const { pathname } = useLocation()
-  const { avisos } = useOc()
+  const { avisos, vista, setVista } = useOc()
   const [plegado, setPlegado] = useState(false)
 
-  const modulo = MODULOS.find((m) => m.rutas.some((r) => pathname.startsWith(r))) ?? MODULOS[0]
+  const vistaActual = VISTAS.find((v) => v.id === vista) ?? VISTAS[0]
+  const modulos = vistaActual.modulos
+  // Sin módulos no hay módulo activo: el header y el main lo tienen que contemplar.
+  const modulo = modulos.find((m) => m.rutas.some((r) => pathname.startsWith(r))) ?? modulos[0] ?? null
   const idxPaso = Math.max(
     0,
     PASOS.findIndex((p) => pathname.startsWith(p.to)),
@@ -90,8 +206,13 @@ export default function Shell() {
         </div>
 
         <div className="flex flex-col gap-1 p-2">
-          {MODULOS.map(({ id, titulo, sub, icono: Icono, to }) => {
-            const activo = modulo.id === id
+          {!modulos.length && !plegado && (
+            <span className="px-2.5 py-2 text-xs leading-snug text-white/55">
+              Esta vista todavía no tiene módulos.
+            </span>
+          )}
+          {modulos.map(({ id, titulo, sub, icono: Icono, to }) => {
+            const activo = modulo?.id === id
             return (
               <NavLink
                 key={id}
@@ -129,16 +250,17 @@ export default function Shell() {
         {/* Header blanco */}
         <header className="flex h-14 shrink-0 items-center gap-4 border-b border-line bg-surface px-6">
           <div className="min-w-0">
-            <h1 className="truncate text-xl font-bold text-navy-800">{modulo.titulo}</h1>
-            <span className="block text-sm text-ink-3">{modulo.sub}</span>
+            <h1 className="truncate text-xl font-bold text-navy-800">
+              {modulo ? modulo.titulo : vistaActual.rotulo}
+            </h1>
+            <span className="block text-sm text-ink-3">
+              {modulo ? modulo.sub : 'Sin módulos habilitados'}
+            </span>
           </div>
 
           <div className="flex-1" />
 
-          <div className="hidden flex-col items-end whitespace-nowrap leading-tight sm:flex">
-            <span className="text-base font-bold text-ink">User</span>
-            <span className="text-sm text-ink-3">Abastecimiento</span>
-          </div>
+          <MenuUsuario vista={vistaActual} onCambiar={setVista} />
           <button
             title="Salir"
             aria-label="Salir"
@@ -149,7 +271,7 @@ export default function Shell() {
         </header>
 
         {/* El stepper solo tiene sentido dentro del flujo */}
-        {modulo.id === 'flujo' && (
+        {modulo?.id === 'flujo' && (
           <nav className="shrink-0 border-b border-line bg-surface-2">
             <div className="contenedor flex items-stretch overflow-x-auto">
               {PASOS.map(({ paso, to, titulo }, i) => {
@@ -200,7 +322,7 @@ export default function Shell() {
         )}
 
         <main className="min-h-0 flex-1 overflow-auto">
-          <Outlet />
+          {modulo ? <Outlet /> : <SinModulos vista={vistaActual} />}
         </main>
       </div>
 

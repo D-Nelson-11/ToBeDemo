@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useReducer, useRef, useState } from 'react'
+import { analizarCorreo, respuestaProveedor } from './correos'
 import { ORDENES_INICIALES } from './ordenes'
 
 const OcContext = createContext(null)
@@ -97,6 +98,14 @@ function reducer(state, action) {
 export function OcProvider({ children }) {
   const [ordenes, dispatch] = useReducer(reducer, ORDENES_INICIALES)
   const [avisos, setAvisos] = useState([])
+  // Quién está viendo el portal: cambia el sidebar completo, por eso vive en el
+  // store y no en el Shell — las pantallas de cliente también la van a leer.
+  const [vista, setVista] = useState('especialista')
+  // Hilos de correo por OC: arrancan vacíos y se llenan al enviar desde la
+  // pantalla. `esperando` son las OC cuya respuesta todavía viene en camino.
+  const [hilos, setHilos] = useState({})
+  const [esperando, setEsperando] = useState([])
+  const envios = useRef({})
   const nextId = useRef(1)
 
   const avisar = useCallback((texto, tono = 'ok') => {
@@ -105,11 +114,41 @@ export function OcProvider({ children }) {
     setTimeout(() => setAvisos((a) => a.filter((x) => x.id !== id)), 4200)
   }, [])
 
+  // El proveedor contesta a los 3 s. El temporizador vive en el store y no en el
+  // modal para que la respuesta llegue aunque el usuario ya lo haya cerrado.
+  const enviarCorreo = useCallback(
+    (oc, correo) => {
+      const n = (envios.current[oc.id] = (envios.current[oc.id] ?? 0) + 1)
+      setHilos((h) => ({ ...h, [oc.id]: [...(h[oc.id] ?? []), correo] }))
+      setEsperando((e) => [...e, oc.id])
+
+      setTimeout(() => {
+        const r = respuestaProveedor(oc, correo.para, n)
+        setHilos((h) => ({ ...h, [oc.id]: [...(h[oc.id] ?? []), r] }))
+        setEsperando((e) => e.filter((x) => x !== oc.id))
+
+        const { tipo } = analizarCorreo(r.cuerpo)
+        avisar(
+          tipo
+            ? `OC ${oc.id}: el proveedor reporta ${tipo}.`
+            : `OC ${oc.id}: el proveedor confirmó la orden.`,
+          tipo === 'retraso' ? 'alerta' : tipo ? 'rojo' : 'ok',
+        )
+      }, 3000)
+    },
+    [avisar],
+  )
+
   const value = useMemo(
     () => ({
       ordenes,
       avisos,
       avisar,
+      vista,
+      setVista,
+      hilos,
+      esperando,
+      enviarCorreo,
       descartarAviso: (id) => setAvisos((a) => a.filter((x) => x.id !== id)),
       toggleEstado: (id) => dispatch({ type: 'toggle-estado', id }),
       setEstado: (id, estado) => dispatch({ type: 'set-estado', id, estado }),
@@ -121,7 +160,7 @@ export function OcProvider({ children }) {
         dispatch({ type: 'marcar-check', ocId, despachoId, lista, idx }),
       reprogramar: (cambios, meta) => dispatch({ type: 'reprogramar', cambios, ...meta }),
     }),
-    [ordenes, avisos, avisar],
+    [ordenes, avisos, avisar, vista, hilos, esperando, enviarCorreo],
   )
 
   return <OcContext.Provider value={value}>{children}</OcContext.Provider>

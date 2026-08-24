@@ -17,6 +17,10 @@ export const RIESGOS = ['Dentro de tiempo', 'En riesgo', 'Fuera de tiempo']
 
 const DIAS_ADUANA = 2 // cuánto se estima que la carga permanece en la frontera
 
+// Nombre del medio en que viaja la carga; el marítimo lleva buque y el terrestre
+// número de unidad. Es lo que la torre muestra junto a la ubicación.
+const BUQUES = ['MSC Aurora', 'CMA Horizon', 'Maersk Sentosa', 'Evergreen Ace', 'ONE Trust']
+
 /** Hash estable de una cadena: los mocks no deben cambiar en cada render. */
 function semilla(txt) {
   let h = 0
@@ -85,6 +89,9 @@ export function construirEmbarques(ordenes) {
           segmento,
           sitio: oc.centro,
           transporte: terrestre ? 'FTL · Terrestre' : 'FCL · Contenedor',
+          buque: terrestre ? `Unidad ${1000 + (s % 900)}` : elige(BUQUES, s),
+          // ETA original: la que se prometió con la fecha de salida planificada.
+          etaOriginal: addDays(plan, ruta.leg1 + ruta.leg2),
           ubicacion: UBICACION[segmento](ruta, oc),
           actualizado: `${String(6 + (s % 6)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`,
         })

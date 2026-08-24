@@ -15,11 +15,13 @@ import {
 import Modal from '../components/ui/Modal'
 import Button, { cx } from '../components/ui/Button'
 import { Select } from '../components/ui/Field'
+import BitacoraAduana from '../components/BitacoraAduana'
+import CostosLogisticos from './CostosLogisticos'
+import DetalleTransito from '../components/DetalleTransito'
 import RielAduana from '../components/RielAduana'
 import RielTransito from '../components/RielTransito'
 import { useOc } from '../data/store'
 import {
-  CAUSAS_COSTO,
   NIVELES,
   RIESGOS,
   SEGMENTOS,
@@ -99,9 +101,10 @@ export default function Torre() {
   const [sitio, setSitio] = useState('')
   const [riesgo, setRiesgo] = useState('')
   const [q, setQ] = useState('')
-  const [causa, setCausa] = useState('')
   const [nivelFiltro, setNivelFiltro] = useState('')
   const [detalle, setDetalle] = useState(null)
+  const enTramite = detalle?.segmento === 'Aduana de Destino'
+  const enTransito = detalle?.segmento === 'Tránsito Internacional'
 
   const embarques = useMemo(() => construirEmbarques(ordenes), [ordenes])
   const costos = useMemo(() => construirCostos(embarques), [embarques])
@@ -134,7 +137,6 @@ export default function Torre() {
     [embarques],
   )
 
-  const costosFiltrados = costos.filter((c) => !causa || c.causa === causa)
   const alertasFiltradas = alertas.filter((a) => !nivelFiltro || String(a.nivel) === nivelFiltro)
 
   const esPagina = segmento === 'Costos' || segmento === 'Alertas'
@@ -430,79 +432,7 @@ export default function Torre() {
         )}
 
         {/* -------------------------------- COSTOS -------------------------------- */}
-        {segmento === 'Costos' && (
-          <>
-            <div className="flex flex-wrap gap-3">
-              <Kpi rotulo="Embarques con costo" valor={costos.length} alerta={costos.length > 0} />
-              <Kpi rotulo="Días de desviación" valor={costos.reduce((a, c) => a + c.dias, 0)} />
-              <Kpi
-                rotulo="Costo abierto total"
-                valor={`$ ${fmtNum(costos.reduce((a, c) => a + c.total, 0))}`}
-                alerta
-              />
-            </div>
-
-            <div className="panel">
-              <div className="panel-head">
-                <span className="panel-title">Segmento de costos logísticos</span>
-                <div className="ml-auto">
-                  <Select
-                    placeholder="Todas las causas"
-                    options={CAUSAS_COSTO}
-                    value={causa}
-                    onChange={(e) => setCausa(e.target.value)}
-                    className="w-[210px]"
-                  />
-                </div>
-              </div>
-              <div className="tabla-scroll">
-                <table className="tbl">
-                  <thead>
-                    <tr>
-                      <th className="w-[150px]">Embarque</th>
-                      <th className="w-[180px]">Sitio</th>
-                      <th className="w-[110px]">Tipo</th>
-                      <th className="w-[150px]">Causa</th>
-                      <th className="min-w-[260px]">Motivo</th>
-                      <th className="w-[70px] text-right!">Días</th>
-                      <th className="w-[110px] text-right!">Costo / día</th>
-                      <th className="w-[120px] text-right!">Costo causa</th>
-                      <th className="min-w-[210px]">Comunicar a</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {costosFiltrados.length === 0 && (
-                      <tr>
-                        <td colSpan={9} className="h-[140px]! bg-surface text-center text-sm text-ink-3">
-                          Sin costos abiertos: ningún embarque acumula desviación.
-                        </td>
-                      </tr>
-                    )}
-                    {costosFiltrados.map((c) => (
-                      <tr key={c.clave} style={{ '--spine': 'var(--color-rojo-600)' }}>
-                        <td className="cell-key">{c.embarque.id}</td>
-                        <td className="cell-cut">{c.embarque.sitio}</td>
-                        <td>
-                          <span className="rounded-full bg-surface-3 px-2 py-[3px] text-xs font-semibold text-ink-2">
-                            {c.tipo}
-                          </span>
-                        </td>
-                        <td className="cell-strong">{c.causa}</td>
-                        <td className="cell-cut" title={c.motivo}>
-                          {c.motivo}
-                        </td>
-                        <td className="cell-num">{c.dias}</td>
-                        <td className="cell-num">$ {fmtNum(c.costoDia)}</td>
-                        <td className="cell-num font-bold text-rojo-700">$ {fmtNum(c.total)}</td>
-                        <td className="cell-cut">{c.comunicar}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </>
-        )}
+        {segmento === 'Costos' && <CostosLogisticos />}
 
         {/* ------------------------------- ALERTAS -------------------------------- */}
         {segmento === 'Alertas' && (
@@ -557,18 +487,30 @@ export default function Torre() {
       </div>
 
       {/* ------------------------------- DETALLE -------------------------------- */}
+      {/* Una sola modal: en aduana de destino es la bitácora del trámite, en el
+          resto de los segmentos sigue siendo el detalle del viaje. */}
       <Modal
         open={!!detalle}
         onClose={() => setDetalle(null)}
         size="lg"
-        eyebrow={detalle ? `${detalle.oc.proveedor} · ${detalle.transporte}` : ''}
+        eyebrow={
+          detalle
+            ? enTramite
+              ? `Bitácora proceso aduanero · ${detalle.ruta.frontera}`
+              : enTransito
+                ? `Detalle del embarque · ${detalle.buque}`
+                : `${detalle.oc.proveedor} · ${detalle.transporte}`
+            : ''
+        }
         title={detalle ? `Embarque ${detalle.id}` : ''}
         footer={
           <>
             <span className="min-w-0 flex-1 text-sm text-ink-2">
-              {detalle?.delay > 0
-                ? `Acumula +${detalle.delay} días contra la fecha planificada.`
-                : 'Sin desviación contra la fecha planificada.'}
+              {enTramite
+                ? `${estatusAduana(detalle)} · ${detalle.oc.proveedor} · ${detalle.oc.centro}`
+                : detalle?.delay > 0
+                  ? `Acumula +${detalle.delay} días contra la fecha planificada.`
+                  : 'Sin desviación contra la fecha planificada.'}
             </span>
             <Button variant="quiet" onClick={() => setDetalle(null)}>
               Cerrar
@@ -576,7 +518,10 @@ export default function Torre() {
           </>
         }
       >
-        {detalle && (
+        {detalle && enTramite && <BitacoraAduana embarque={detalle} />}
+        {detalle && enTransito && <DetalleTransito embarque={detalle} />}
+
+        {detalle && !enTramite && !enTransito && (
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap gap-3">
               <Kpi rotulo="Segmento actual" valor={detalle.segmento} />

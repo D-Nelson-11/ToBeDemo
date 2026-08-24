@@ -6,6 +6,10 @@ import {
   LuCalendarDays,
   LuFileDown,
   LuFileUp,
+  LuCircleAlert,
+  LuLoaderCircle,
+  LuMail,
+  LuMailWarning,
   LuRotateCcw,
   LuSearchX,
   LuSparkles,
@@ -18,10 +22,20 @@ import {
   LuX,
 } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
+import ModalCorreoProveedor from './ModalCorreoProveedor'
 import ModalCrearDespacho from './ModalCrearDespacho'
 import ModalEditarOc from './ModalEditarOc'
+import { alertaDelHilo } from '../data/correos'
 import { cantidadDespachada, cantidadTotalOc, useOc } from '../data/store'
 import { desdeHoy, diasEntre, fmtFechaCorta, hoy, parseISO } from '../lib/fechas'
+
+// Lo que reporta el proveedor por correo desplaza al pendiente en la columna
+// Situación: es lo más urgente que tiene la fila.
+const SIT_ALERTA = {
+  urgencia: { rotulo: 'Urgente', clase: 'text-rojo-700', chip: 'border-rojo-100 bg-rojo-50 text-rojo-700' },
+  problema: { rotulo: 'Urgente', clase: 'text-rojo-700', chip: 'border-rojo-100 bg-rojo-50 text-rojo-700' },
+  retraso: { rotulo: 'Retraso', clase: 'text-ambar-700', chip: 'border-ambar-100 bg-ambar-50 text-ambar-700' },
+}
 
 const SITUACIONES = {
   pago: { rotulo: 'Pendiente de pago', icono: LuWallet },
@@ -67,7 +81,7 @@ function FiltroCol({ valor, onChange }) {
 }
 
 export default function Despachos() {
-  const { ordenes, toggleEstado, toggleActiva, avisar } = useOc()
+  const { ordenes, hilos, esperando, toggleEstado, toggleActiva, avisar } = useOc()
 
   const [qOc, setQOc] = useState('')
   const [qProv, setQProv] = useState('')
@@ -77,6 +91,7 @@ export default function Despachos() {
   const [orden, setOrden] = useState({ campo: 'fechaDoc', dir: 'desc' })
 
   const [ocDespacho, setOcDespacho] = useState(null)
+  const [ocCorreo, setOcCorreo] = useState(null)
   const [ocEditar, setOcEditar] = useState(null)
 
   // Base sobre la que se cuentan los filtros: respeta el interruptor de inactivas
@@ -232,7 +247,7 @@ export default function Despachos() {
                 Resp. compra
               </Th>
               <th className="w-[104px]">Estado</th>
-              <th className="w-[138px] text-right!">Acciones</th>
+              <th className="w-[162px] text-right!">Acciones</th>
             </tr>
             <tr className="filtros">
               <th />
@@ -272,12 +287,17 @@ export default function Despachos() {
               const totalKg = cantidadTotalOc(oc)
               const pct = totalKg ? Math.round((cantidadDespachada(oc) / totalKg) * 100) : 0
               const cerrada = oc.estado === 'cerrada'
+              const alerta = alertaDelHilo(hilos[oc.id])
+              const esperandoOc = esperando.includes(oc.id)
+              const sitAlerta = SIT_ALERTA[alerta]
               // el lomo solo se pinta cuando la fila pide acción: así el ojo va a lo que falta
               const spine = !oc.activa
                 ? 'rgba(0,48,73,0.16)'
-                : !cerrada && oc.pendiente
-                  ? 'var(--color-ambar-500)'
-                  : 'transparent'
+                : sitAlerta
+                  ? `var(--color-${alerta === 'retraso' ? 'ambar-500' : 'rojo-600'})`
+                  : !cerrada && oc.pendiente
+                    ? 'var(--color-ambar-500)'
+                    : 'transparent'
               const embarqueViejo = oc.ultEmbarque && diasEntre(parseISO(oc.ultEmbarque), hoy()) > 120
 
               return (
@@ -354,7 +374,15 @@ export default function Despachos() {
                   <td className={cx('cell-num', dias > 90 && 'text-ink-3')}>{dias}</td>
 
                   <td>
-                    {sit ? (
+                    {sitAlerta ? (
+                      <span
+                        className={cx('inline-flex items-center gap-1.5 font-bold', sitAlerta.clase)}
+                        title={`El proveedor reporta ${alerta} en el correo de esta OC`}
+                      >
+                        <LuCircleAlert size={13} />
+                        {sitAlerta.rotulo}
+                      </span>
+                    ) : sit ? (
                       <span className="inline-flex items-center gap-1.5 text-ink-2">
                         <IconoSit size={13} className="text-ink-3" />
                         {sit.rotulo}
@@ -394,9 +422,11 @@ export default function Despachos() {
                       title={cerrada ? 'Reabrir la OC' : 'Cerrar la OC (deja de admitir despachos)'}
                       className={cx(
                         'inline-flex h-[22px] items-center gap-1.5 whitespace-nowrap rounded-full border py-0 pl-[7px] pr-[9px] text-xs font-semibold transition duration-100 hover:brightness-97 active:scale-95',
-                        cerrada
-                          ? 'border-line bg-surface-3 text-ink-2'
-                          : 'border-teal-100 bg-teal-50 text-teal-700',
+                        sitAlerta
+                          ? sitAlerta.chip
+                          : cerrada
+                            ? 'border-line bg-surface-3 text-ink-2'
+                            : 'border-teal-100 bg-teal-50 text-teal-700',
                       )}
                     >
                       {cerrada ? 'Cerrada' : 'Abierta'}
@@ -405,6 +435,28 @@ export default function Despachos() {
 
                   <td>
                     <div className="flex items-center justify-end">
+                      {/* Correo del proveedor: se pinta en rojo cuando el hilo
+                          trae palabras de urgencia, retraso o problema. */}
+                      <button
+                        className={cx('ico', alerta && 'ico-rojo ico-on')}
+                        title={
+                          esperandoOc
+                            ? 'Correo enviado: esperando respuesta del proveedor'
+                            : alerta
+                              ? `Correo del proveedor con ${alerta} — revisar el hilo de la OC`
+                              : 'Correo al proveedor: consultar recepción y disponibilidad'
+                        }
+                        onClick={() => setOcCorreo(oc)}
+                      >
+                        {esperandoOc ? (
+                          <LuLoaderCircle size={14} className="motion-safe:animate-spin" />
+                        ) : alerta ? (
+                          <LuMailWarning size={14} />
+                        ) : (
+                          <LuMail size={14} />
+                        )}
+                      </button>
+
                       <button className="ico" title="Editar OC: cantidades, precios y datos" onClick={() => setOcEditar(oc)}>
                         <LuSquarePen size={14} />
                       </button>
@@ -465,6 +517,7 @@ export default function Despachos() {
         </div>
       </div>
 
+      <ModalCorreoProveedor oc={ocCorreo} onClose={() => setOcCorreo(null)} />
       <ModalCrearDespacho oc={ocDespacho} onClose={() => setOcDespacho(null)} />
       <ModalEditarOc oc={ocEditar} onClose={() => setOcEditar(null)} />
     </div>
