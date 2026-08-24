@@ -13,6 +13,18 @@ const m = (codigo, nombre, categoria, cantidad, unidad, precio) => ({
   precio,
 })
 
+
+// Las salidas van relativas a hoy: así el demo siempre tiene embarques en cada
+// segmento de la torre, sin importar el día en que se abra.
+const rel = (dias) => {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() + dias)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+    d.getDate(),
+  ).padStart(2, '0')}`
+}
+
 export const ORDENES_INICIALES = [
   {
     id: '5523833',
@@ -47,7 +59,7 @@ export const ORDENES_INICIALES = [
     ultEmbarque: '2026-06-02',
     estado: 'abierta',
     activa: true,
-    pendiente: 'fechas',
+    pendiente: null,
     incoterm: 'DAP',
     condPago: 'Crédito 45 días',
     moneda: 'USD',
@@ -59,7 +71,18 @@ export const ORDENES_INICIALES = [
       m('1002104', 'Plátano Verde Exportación', 'Frutas frescas', 120000, 'KG', 0.412),
       m('1002110', 'Plátano Verde Segunda', 'Frutas frescas', 30000, 'KG', 0.298),
     ],
-    despachos: [],
+    despachos: [
+      {
+        id: 'DPE4',
+        material: '1002104',
+        cantidad: 60000,
+        salida: rel(-2),
+        salidaPlan: rel(-4),
+        ruta: 'miami',
+        aduana: [true, true, true, false],
+        logistica: [true, true, true, false],
+      },
+    ],
   },
   {
     id: '5526804',
@@ -81,7 +104,18 @@ export const ORDENES_INICIALES = [
     nota: 'Anticipo enviado a tesorería el 12/06.',
     instrucciones: '',
     materiales: [m('1003220', 'Aceite de Palma RBD', 'Aceites', 48000, 'KG', 1.185)],
-    despachos: [],
+    despachos: [
+      {
+        id: 'DPE5',
+        material: '1003220',
+        cantidad: 24000,
+        salida: rel(-3),
+        salidaPlan: rel(-6),
+        ruta: 'longbeach',
+        aduana: [true, true, false, false],
+        logistica: [true, true, false, false],
+      },
+    ],
   },
   {
     id: '5525294',
@@ -94,7 +128,7 @@ export const ORDENES_INICIALES = [
     ultEmbarque: '2026-04-29',
     estado: 'abierta',
     activa: true,
-    pendiente: 'programar',
+    pendiente: null,
     incoterm: 'DAP',
     condPago: 'Crédito 30 días',
     moneda: 'HNL',
@@ -103,7 +137,18 @@ export const ORDENES_INICIALES = [
     nota: '',
     instrucciones: '',
     materiales: [m('1004001', 'Maíz Amarillo', 'Granos', 250000, 'KG', 0.324)],
-    despachos: [],
+    despachos: [
+      {
+        id: 'DPE6',
+        material: '1004001',
+        cantidad: 125000,
+        salida: rel(-1),
+        salidaPlan: rel(-2),
+        ruta: 'oakland',
+        aduana: [true, false, false, false],
+        logistica: [true, true, false, false],
+      },
+    ],
   },
   {
     id: '5524683',
@@ -154,8 +199,8 @@ export const ORDENES_INICIALES = [
         id: 'DPE1',
         material: '1002104',
         cantidad: 20000,
-        salida: '2026-08-14',
-        salidaPlan: '2026-08-11',
+        salida: rel(-7),
+        salidaPlan: rel(-10),
         ruta: 'longbeach',
         aduana: [true, false, false, false],
         logistica: [true, true, false, false],
@@ -164,18 +209,17 @@ export const ORDENES_INICIALES = [
         id: 'DPE2',
         material: '1002104',
         cantidad: 20000,
-        salida: '2026-08-24',
-        salidaPlan: '2026-08-22',
+        salida: rel(3),
+        salidaPlan: rel(1),
         ruta: 'longbeach',
         aduana: [true, true, true, true],
         logistica: [true, true, true, false],
       },
       {
-        // Reembarcado por otra ruta: no se puede gestionar junto con D-01 y D-02.
         id: 'DPE3',
         material: '1002104',
         cantidad: 20000,
-        salida: '2026-09-05',
+        salida: rel(15),
         ruta: 'houston',
         aduana: [true, true, true, true],
         logistica: [true, true, true, true],
@@ -225,8 +269,24 @@ export const ORDENES_INICIALES = [
     instrucciones: '',
     materiales: [m('1004001', 'Maíz Amarillo', 'Granos', 180000, 'KG', 0.318)],
     despachos: [
-      { id: 'DPE4', material: '1004001', cantidad: 90000, salida: '2026-04-20', ruta: 'houston', aduana: [true, true, true, true], logistica: [true, true, true, true] },
-      { id: 'DPE5', material: '1004001', cantidad: 90000, salida: '2026-05-06', ruta: 'houston', aduana: [true, true, true, true], logistica: [true, true, true, true] },
+      {
+        id: 'DPE8',
+        material: '1004001',
+        cantidad: 90000,
+        salida: rel(-120),
+        ruta: 'houston',
+        aduana: [true, true, true, true],
+        logistica: [true, true, true, true],
+      },
+      {
+        id: 'DPE9',
+        material: '1004001',
+        cantidad: 90000,
+        salida: rel(-105),
+        ruta: 'houston',
+        aduana: [true, true, true, true],
+        logistica: [true, true, true, true],
+      },
     ],
   },
   {
@@ -272,7 +332,15 @@ export const ORDENES_INICIALES = [
     instrucciones: '',
     materiales: [m('1005512', 'Yuca Fresca Industrial', 'Papa y tubérculos', 40000, 'KG', 0.528)],
     despachos: [
-      { id: 'DPE6', material: '1005512', cantidad: 40000, salida: '2026-03-18', ruta: 'laredo', aduana: [true, true, true, true], logistica: [true, true, true, true] },
+      {
+        id: 'DPE10',
+        material: '1005512',
+        cantidad: 40000,
+        salida: rel(-150),
+        ruta: 'laredo',
+        aduana: [true, true, true, true],
+        logistica: [true, true, true, true],
+      },
     ],
   },
   {
@@ -340,7 +408,15 @@ export const ORDENES_INICIALES = [
     instrucciones: '',
     materiales: [m('1002310', 'Piña MD2', 'Frutas frescas', 24000, 'KG', 0.598)],
     despachos: [
-      { id: 'DPE7', material: '1002310', cantidad: 24000, salida: '2024-09-25', ruta: 'miami', aduana: [true, true, true, true], logistica: [true, true, true, true] },
+      {
+        id: 'DPE11',
+        material: '1002310',
+        cantidad: 24000,
+        salida: rel(-330),
+        ruta: 'miami',
+        aduana: [true, true, true, true],
+        logistica: [true, true, true, true],
+      },
     ],
   },
   {
@@ -401,7 +477,7 @@ export const ORDENES_INICIALES = [
     ultEmbarque: '2026-02-14',
     estado: 'abierta',
     activa: true,
-    pendiente: 'programar',
+    pendiente: null,
     incoterm: 'DAP',
     condPago: 'Crédito 45 días',
     moneda: 'USD',
@@ -410,6 +486,16 @@ export const ORDENES_INICIALES = [
     nota: '',
     instrucciones: '',
     materiales: [m('1002240', 'Banano Verde Industrial', 'Frutas frescas', 110000, 'KG', 0.281)],
-    despachos: [],
+    despachos: [
+      {
+        id: 'DPE7',
+        material: '1002240',
+        cantidad: 55000,
+        salida: rel(1),
+        ruta: 'laredo',
+        aduana: [true, false, false, false],
+        logistica: [true, false, false, false],
+      },
+    ],
   },
 ]

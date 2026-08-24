@@ -16,16 +16,16 @@ import { cx } from './ui/Button'
 
 export const PASOS = [
   { paso: 1, to: '/orden-compra', titulo: 'Crear Orden de Compra' },
-  { paso: 2, to: '/despachos', titulo: 'Crear Despacho' },
-  { paso: 3, to: '/seguimiento', titulo: 'Seguimiento de Despacho' },
-  { paso: 4, to: '/gestiones', titulo: 'Crear Gestiones' },
+  { paso: 2, to: '/despachos', titulo: 'Administracion de orden de compra' },
+  { paso: 3, to: '/seguimiento', titulo: 'Planificacion de abasto' },
+  { paso: 4, to: '/gestiones', titulo: 'Crear instrucciones' },
 ]
 
 // Dos módulos: el flujo paso a paso y la vista de monitoreo.
 export const MODULOS = [
   {
     id: 'flujo',
-    titulo: 'Despachos',
+    titulo: 'Planificación de Suministros',
     sub: 'Flujo paso a paso',
     icono: LuWorkflow,
     to: PASOS[0].to,
