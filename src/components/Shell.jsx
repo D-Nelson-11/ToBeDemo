@@ -1,7 +1,8 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { Fragment, Suspense, useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   LuBriefcase,
+  LuChartColumn,
   LuCheck,
   LuChevronDown,
   LuCircleAlert,
@@ -42,9 +43,17 @@ export const MODULOS = [
     to: '/torre',
     rutas: ['/torre'],
   },
+  {
+    id: 'kpi',
+    titulo: 'KPI',
+    sub: 'Indicadores de volumen',
+    icono: LuChartColumn,
+    to: '/kpi',
+    rutas: ['/kpi'],
+  },
 ]
 
-// Lo que ve el cliente: sus cuatro pantallas viven en un solo módulo con tabs.
+// Lo que ve el cliente: sus cuatro pantallas en un solo módulo con pestañas.
 export const MODULOS_CLIENTE = [
   {
     id: 'cliente',
@@ -154,6 +163,18 @@ function MenuUsuario({ vista, onCambiar }) {
           })}
         </div>
       )}
+    </div>
+  )
+}
+
+/** Lo que se ve mientras se baja el archivo de la pantalla. */
+function Cargando() {
+  return (
+    <div className="flex h-full items-center justify-center">
+      <span className="flex items-center gap-2.5 text-sm text-ink-3">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-line-strong border-t-navy-600" />
+        Cargando pantalla…
+      </span>
     </div>
   )
 }
@@ -354,7 +375,9 @@ export default function Shell() {
         )}
 
         <main className="min-h-0 flex-1 overflow-auto">
-          {modulo ? <Outlet /> : <SinModulos vista={vistaActual} />}
+          <Suspense fallback={<Cargando />}>
+            {modulo ? <Outlet /> : <SinModulos vista={vistaActual} />}
+          </Suspense>
         </main>
       </div>
 

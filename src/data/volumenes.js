@@ -29,10 +29,6 @@ export const MODO_COLOR = {
   'Terrestre LCL': '#c1502e',
 }
 
-// Un solo tono para las magnitudes: en barras por aduana o por planta la
-// categoría ya está en la etiqueta, pintarlas de colores distintos no informa.
-export const TONO_MAGNITUD = '#17587a'
-
 export const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
 export const ANIO = 2026

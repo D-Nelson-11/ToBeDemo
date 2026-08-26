@@ -4,7 +4,8 @@ import Button, { cx } from '../components/ui/Button'
 import { Select } from '../components/ui/Field'
 import { Kpi } from '../components/ui/Valores'
 import { useOc } from '../data/store'
-import { ADUANAS, MODO_COLOR, PLANTA_ROTULO, SKUS, TONO_MAGNITUD } from '../data/volumenes'
+import { BarrasH, BarrasV, Reparto } from '../components/ui/Graficos'
+import { ADUANAS, MODO_COLOR, PLANTA_ROTULO, SKUS } from '../data/volumenes'
 import {
   GRANULARIDADES,
   filtrar,
@@ -21,123 +22,8 @@ import { fmtNum } from '../lib/fechas'
 
 const tm = (n) => `${fmtNum(n, 1)} TM`
 
-/** Globo de valor. Vive dentro de un contenedor `relative`. */
-function Globo({ children, x, y }) {
-  return (
-    <span
-      className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-sm bg-navy-800 px-2 py-1 text-xs font-semibold text-white shadow-[0_6px_16px_-6px_rgba(0,28,44,0.6)]"
-      style={{ left: x, top: y }}
-    >
-      {children}
-    </span>
-  )
-}
-
-/** Barras verticales de una sola serie: la categoría ya va en el eje. */
-function BarrasV({ datos, unidad }) {
-  const [sobre, setSobre] = useState(null)
-  const max = Math.max(...datos.map((d) => d.valor), 1)
-
-  return (
-    <div className="relative flex h-[190px] items-end gap-[2px] px-1 pt-6">
-      {sobre !== null && (
-        <Globo x={`calc(${((sobre + 0.5) / datos.length) * 100}% )`} y={18}>
-          {datos[sobre].clave}: {fmtNum(datos[sobre].valor)} {unidad}
-        </Globo>
-      )}
-      {datos.map((d, i) => (
-        <div
-          key={d.clave}
-          onMouseEnter={() => setSobre(i)}
-          onMouseLeave={() => setSobre(null)}
-          className="flex min-w-0 flex-1 cursor-default flex-col items-center justify-end gap-1.5 self-stretch"
-        >
-          <span
-            className="w-full rounded-t-[4px] transition-opacity duration-100"
-            style={{
-              height: `${Math.max(2, (d.valor / max) * 100)}%`,
-              background: TONO_MAGNITUD,
-              opacity: sobre === null || sobre === i ? 1 : 0.45,
-            }}
-          />
-          <span className="num w-full truncate text-center text-xs text-ink-3">{d.clave}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/** Barras horizontales de una sola serie, con el valor rotulado al final. */
-function BarrasH({ datos, tope }) {
-  const max = Math.max(...datos.map((d) => d.tm), 1)
-  return (
-    <div className="flex flex-col gap-2.5">
-      {datos.length === 0 && <span className="text-sm text-ink-3">Sin movimiento en este periodo.</span>}
-      {datos.slice(0, tope).map((d) => (
-        <div key={d.clave}>
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="min-w-0 truncate text-sm text-ink-2" title={d.clave}>
-              {d.clave}
-            </span>
-            <b className="num shrink-0 font-bold text-ink">{tm(d.tm)}</b>
-          </div>
-          <span className="mt-1 block h-2 w-full overflow-hidden rounded-full bg-surface-3">
-            <span
-              className="block h-full rounded-full"
-              style={{ width: `${(d.tm / max) * 100}%`, background: TONO_MAGNITUD }}
-            />
-          </span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/** Reparto por modalidad: una barra al 100% con su leyenda rotulada. */
-function Reparto({ datos }) {
-  const [sobre, setSobre] = useState(null)
-  const total = datos.reduce((a, d) => a + d.tm, 0) || 1
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex h-7 w-full gap-[2px] overflow-hidden rounded-sm">
-        {datos.map((d, i) => (
-          <span
-            key={d.clave}
-            title={`${d.clave}: ${tm(d.tm)}`}
-            onMouseEnter={() => setSobre(i)}
-            onMouseLeave={() => setSobre(null)}
-            className="min-w-[3px] cursor-default transition-opacity duration-100"
-            style={{
-              width: `${(d.tm / total) * 100}%`,
-              background: MODO_COLOR[d.clave],
-              opacity: sobre === null || sobre === i ? 1 : 0.45,
-            }}
-          />
-        ))}
-      </div>
-      {/* La leyenda lleva el valor: la identidad nunca queda solo en el color */}
-      <div className="grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
-        {datos.map((d, i) => (
-          <span
-            key={d.clave}
-            onMouseEnter={() => setSobre(i)}
-            onMouseLeave={() => setSobre(null)}
-            className="flex items-baseline gap-2 text-sm"
-          >
-            <span
-              className="h-2.5 w-2.5 shrink-0 translate-y-px rounded-xs"
-              style={{ background: MODO_COLOR[d.clave] }}
-            />
-            <span className="min-w-0 flex-1 truncate text-ink-2">{d.clave}</span>
-            <b className="num shrink-0 font-bold text-ink">{tm(d.tm)}</b>
-            <span className="num shrink-0 text-ink-3">{Math.round((d.tm / total) * 100)}%</span>
-          </span>
-        ))}
-      </div>
-    </div>
-  )
-}
+/** Los gráficos comen { clave, valor }; acá la magnitud son toneladas. */
+const aSerie = (grupos) => grupos.map((g) => ({ clave: g.clave, valor: g.tm }))
 
 function Tarjeta({ titulo, pie, children }) {
   return (
@@ -235,19 +121,19 @@ export default function DashboardVolumenes() {
           titulo="Contenedores movilizados"
           pie={gran === 'semana' ? 'por planta' : gran === 'mes' ? 'por semana' : 'por mes'}
         >
-          <BarrasV datos={serie} unidad="contenedores" />
+          <BarrasV datos={serie} unidad="contenedores" fmt={fmtNum} />
         </Tarjeta>
 
         <Tarjeta titulo="Volumen por modalidad" pie="TM ingresadas">
-          <Reparto datos={modalidad} />
+          <Reparto datos={aSerie(modalidad)} color={MODO_COLOR} fmt={(n) => fmtNum(n, 1)} sufijo=" TM" />
         </Tarjeta>
 
         <Tarjeta titulo="Volumen por aduana" pie="TM ingresadas">
-          <BarrasH datos={aduanas} />
+          <BarrasH datos={aSerie(aduanas)} fmt={(n) => fmtNum(n, 1)} sufijo=" TM" />
         </Tarjeta>
 
         <Tarjeta titulo="Volumen por planta" pie="TM ingresadas">
-          <BarrasH datos={plantas.map((p) => ({ ...p, clave: PLANTA_ROTULO[p.clave] }))} />
+          <BarrasH datos={aSerie(plantas).map((p) => ({ ...p, clave: PLANTA_ROTULO[p.clave] }))} fmt={(n) => fmtNum(n, 1)} sufijo=" TM" />
         </Tarjeta>
       </div>
 
