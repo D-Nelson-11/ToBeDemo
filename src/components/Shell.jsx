@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Fragment, useEffect, useRef, useState } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   LuBriefcase,
   LuCheck,
@@ -44,8 +44,19 @@ export const MODULOS = [
   },
 ]
 
+// Lo que ve el cliente: sus cuatro pantallas viven en un solo módulo con tabs.
+export const MODULOS_CLIENTE = [
+  {
+    id: 'cliente',
+    titulo: 'Portal del cliente',
+    sub: 'Planning, torre, costos y entrega',
+    icono: LuBriefcase,
+    to: '/cliente',
+    rutas: ['/cliente'],
+  },
+]
+
 // Cada vista es un portal distinto: cambia el sidebar entero, no solo el permiso.
-// La de cliente todavía no tiene módulos — cuando los tenga, se agregan acá.
 export const VISTAS = [
   {
     id: 'especialista',
@@ -61,7 +72,7 @@ export const VISTAS = [
     usuario: 'User',
     area: 'Cliente',
     icono: LuBriefcase,
-    modulos: [],
+    modulos: MODULOS_CLIENTE,
   },
 ]
 
@@ -162,8 +173,17 @@ function SinModulos({ vista }) {
 
 export default function Shell() {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   const { avisos, vista, setVista } = useOc()
   const [plegado, setPlegado] = useState(false)
+
+  // Cambiar de vista tiene que mover la ruta: si no, el header dice una cosa y
+  // el <Outlet/> sigue mostrando la pantalla del portal anterior.
+  const cambiarVista = (id) => {
+    setVista(id)
+    const destino = VISTAS.find((v) => v.id === id)?.modulos[0]?.to
+    if (destino) navigate(destino)
+  }
 
   const vistaActual = VISTAS.find((v) => v.id === vista) ?? VISTAS[0]
   const modulos = vistaActual.modulos
@@ -180,7 +200,7 @@ export default function Shell() {
           El ancho es lo único que se anima; los rótulos se recortan al cerrarse. */}
       <nav
         className={cx(
-          'flex shrink-0 flex-col overflow-hidden bg-head text-white',
+          'flex shrink-0 flex-col overflow-hidden bg-navy-800 text-white',
           'transition-[width] duration-200 ease-[var(--ease-out-soft)] motion-reduce:transition-none',
           plegado ? 'w-14' : 'w-[242px]',
         )}
@@ -260,7 +280,7 @@ export default function Shell() {
 
           <div className="flex-1" />
 
-          <MenuUsuario vista={vistaActual} onCambiar={setVista} />
+          <MenuUsuario vista={vistaActual} onCambiar={cambiarVista} />
           <button
             title="Salir"
             aria-label="Salir"
@@ -272,49 +292,61 @@ export default function Shell() {
 
         {/* El stepper solo tiene sentido dentro del flujo */}
         {modulo?.id === 'flujo' && (
-          <nav className="shrink-0 border-b border-line bg-surface-2">
-            <div className="contenedor flex items-stretch overflow-x-auto">
+          <nav className="shrink-0 border-b border-line bg-surface">
+            <div className="contenedor flex items-center overflow-x-auto py-2">
               {PASOS.map(({ paso, to, titulo }, i) => {
                 const hecho = i < idxPaso
                 return (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    className={({ isActive }) =>
-                      cx(
-                        'relative flex shrink-0 items-center gap-2.5 py-2.5 pl-4 pr-6 no-underline transition-colors duration-100 first:pl-0',
-                        isActive ? 'text-navy-800' : 'text-ink-2 hover:text-navy-700',
-                        isActive &&
-                          'after:absolute after:inset-x-0 after:bottom-0 after:h-[3px] after:bg-rojo-600',
-                      )
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        {i > 0 && (
-                          <span className="absolute left-0 top-1/2 h-px w-4 -translate-y-1/2 bg-line-strong" />
+                  <Fragment key={to}>
+                    {/* El tramo se pinta cuando el paso anterior ya se completó */}
+                    {i > 0 && (
+                      <span
+                        className={cx(
+                          'mx-1 h-0.5 min-w-[18px] flex-1 rounded-full transition-colors duration-150',
+                          i <= idxPaso ? 'bg-teal-600' : 'bg-line',
                         )}
-                        <span
-                          className={cx(
-                            'flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border text-xs font-bold transition-colors duration-100',
-                            isActive
-                              ? 'border-navy-800 bg-navy-800 text-white'
-                              : hecho
-                                ? 'border-teal-600 bg-teal-600 text-white'
-                                : 'border-line-strong text-ink-3',
-                          )}
-                        >
-                          {hecho ? <LuCheck size={12} strokeWidth={3} /> : paso}
-                        </span>
-                        <span className="flex flex-col leading-tight">
-                          <span className="text-3xs text-ink-4">Paso {paso}</span>
-                          <span className={cx('text-sm', isActive ? 'font-bold' : 'font-medium')}>
+                      />
+                    )}
+                    <NavLink
+                      to={to}
+                      className={({ isActive }) =>
+                        cx(
+                          'flex shrink-0 items-center gap-2.5 rounded-md px-2.5 py-1.5 no-underline transition-colors duration-100',
+                          isActive ? 'bg-navy-50' : 'hover:bg-surface-2',
+                        )
+                      }
+                    >
+                      {({ isActive }) => (
+                        <>
+                          {/* El número vive en el círculo: no hace falta repetirlo de rótulo */}
+                          <span
+                            className={cx(
+                              'flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full text-sm font-bold transition-colors duration-100',
+                              isActive
+                                ? 'bg-navy-800 text-white ring-4 ring-navy-100'
+                                : hecho
+                                  ? 'bg-teal-600 text-white'
+                                  : 'border border-line-strong bg-surface text-ink-3',
+                            )}
+                          >
+                            {hecho ? <LuCheck size={13} strokeWidth={3} /> : paso}
+                          </span>
+                          <span
+                            className={cx(
+                              'whitespace-nowrap text-base',
+                              isActive
+                                ? 'font-bold text-navy-800'
+                                : hecho
+                                  ? 'font-medium text-ink-2'
+                                  : 'text-ink-3',
+                            )}
+                          >
                             {titulo}
                           </span>
-                        </span>
-                      </>
-                    )}
-                  </NavLink>
+                        </>
+                      )}
+                    </NavLink>
+                  </Fragment>
                 )
               })}
             </div>

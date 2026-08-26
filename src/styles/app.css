@@ -37,9 +37,8 @@
   --color-ink-3: #758a97;
   --color-ink-4: #9db0bb;
 
-  /* Cromo del portal actual: la banda del head y la de navegación van con
-     los azules que ya usa el sistema. El navy de marca queda para las tablas. */
-  --color-head: #4d6fa3;
+  /* Azules sueltos del portal actual. Ninguna pantalla los usa hoy: el cromo
+     (sidebar y cabecera de tabla) va con el navy de marca. */
   --color-nav: #5b8bd4;
   --color-nav-hover: #4a78c0;
 
@@ -356,6 +355,44 @@
   }
   .seg-on {
     @apply bg-navy-800 font-semibold text-white hover:bg-navy-800 hover:text-white;
+  }
+
+  /* --- barra de tabs: UNA sola fila que scrollea en x. El subrayado marca el
+     activo; con 11 tabs, cajas con borde propio se leen como botones sueltos. --- */
+  .tabbar {
+    @apply flex items-stretch gap-1 overflow-x-auto border-b border-line;
+    /* la barra de scroll pelearía con el borde inferior; el tab cortado ya avisa */
+    scrollbar-width: none;
+  }
+  .tabbar::-webkit-scrollbar {
+    display: none;
+  }
+  .tab {
+    @apply relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-t-sm border-0
+      bg-transparent px-3 pb-2.5 pt-2 text-base font-medium text-ink-2 transition-colors duration-100
+      hover:bg-surface-2 hover:text-navy-800;
+  }
+  .tab::after {
+    content: '';
+    @apply absolute inset-x-2 bottom-0 h-[2px] rounded-full bg-transparent transition-colors duration-100;
+  }
+  .tab:hover::after {
+    @apply bg-line-strong;
+  }
+  .tab-on {
+    @apply font-bold text-navy-800;
+  }
+  .tab-on::after,
+  .tab-on:hover::after {
+    @apply bg-navy-800;
+  }
+  /* contador dentro de un tab */
+  .tab-n {
+    @apply rounded-full bg-surface-3 px-1.5 text-xs font-bold text-ink-3;
+    font-variant-numeric: tabular-nums;
+  }
+  .tab-on .tab-n {
+    @apply bg-navy-100 text-navy-800;
   }
 
   /* --- panel: superficie con borde, sin sombra --- */

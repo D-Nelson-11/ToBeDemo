@@ -105,6 +105,13 @@ export function OcProvider({ children }) {
   // pantalla. `esperando` son las OC cuya respuesta todavía viene en camino.
   const [hilos, setHilos] = useState({})
   const [esperando, setEsperando] = useState([])
+  // Documentos de transporte ya recolectados, por embarque. Vive acá y no en la
+  // pantalla para que la recolecta sobreviva al cambio de tab de la torre.
+  const [recolectas, setRecolectas] = useState({})
+  // Coordinaciones de entrega y avance del finiquito, por embarque. Igual que
+  // las recolectas: es estado de la torre, no de la OC ni del despacho.
+  const [coordinaciones, setCoordinaciones] = useState({})
+  const [finiquitos, setFiniquitos] = useState({})
   const envios = useRef({})
   const nextId = useRef(1)
 
@@ -139,11 +146,31 @@ export function OcProvider({ children }) {
     [avisar],
   )
 
+  const recolectarDocumento = useCallback((clave, instruccion) => {
+    setRecolectas((r) => ({ ...r, [clave]: { instruccion, fecha: new Date() } }))
+  }, [])
+
+  // Un solo setter para toda la coordinación: registrarla, moverla a aduana o
+  // confirmarla son el mismo cambio de estado sobre el mismo embarque.
+  const coordinarEntrega = useCallback((clave, datos) => {
+    setCoordinaciones((c) => ({ ...c, [clave]: { ...c[clave], ...datos } }))
+  }, [])
+
+  const avanzarFiniquito = useCallback((clave, estatus) => {
+    setFiniquitos((f) => ({ ...f, [clave]: estatus }))
+  }, [])
+
   const value = useMemo(
     () => ({
       ordenes,
       avisos,
       avisar,
+      recolectas,
+      recolectarDocumento,
+      coordinaciones,
+      coordinarEntrega,
+      finiquitos,
+      avanzarFiniquito,
       vista,
       setVista,
       hilos,
@@ -160,7 +187,21 @@ export function OcProvider({ children }) {
         dispatch({ type: 'marcar-check', ocId, despachoId, lista, idx }),
       reprogramar: (cambios, meta) => dispatch({ type: 'reprogramar', cambios, ...meta }),
     }),
-    [ordenes, avisos, avisar, vista, hilos, esperando, enviarCorreo],
+    [
+      ordenes,
+      avisos,
+      avisar,
+      vista,
+      hilos,
+      esperando,
+      enviarCorreo,
+      recolectas,
+      recolectarDocumento,
+      coordinaciones,
+      coordinarEntrega,
+      finiquitos,
+      avanzarFiniquito,
+    ],
   )
 
   return <OcContext.Provider value={value}>{children}</OcContext.Provider>

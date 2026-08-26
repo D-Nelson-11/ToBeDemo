@@ -15,19 +15,21 @@ export const SEGMENTOS = [
 
 export const RIESGOS = ['Dentro de tiempo', 'En riesgo', 'Fuera de tiempo']
 
-const DIAS_ADUANA = 2 // cuánto se estima que la carga permanece en la frontera
+export const DIAS_ADUANA = 2 // cuánto se estima que la carga permanece en la frontera
 
 // Nombre del medio en que viaja la carga; el marítimo lleva buque y el terrestre
 // número de unidad. Es lo que la torre muestra junto a la ubicación.
 const BUQUES = ['MSC Aurora', 'CMA Horizon', 'Maersk Sentosa', 'Evergreen Ace', 'ONE Trust']
 
 /** Hash estable de una cadena: los mocks no deben cambiar en cada render. */
-function semilla(txt) {
+export function semilla(txt) {
   let h = 0
   for (let i = 0; i < txt.length; i++) h = (h * 31 + txt.charCodeAt(i)) >>> 0
   return h
 }
-const elige = (lista, s) => lista[s % lista.length]
+// Math.abs: los llamadores desplazan la semilla (s >> k) y el shift con signo
+// puede volverla negativa, lo que daría un índice fuera de la lista.
+export const elige = (lista, s) => lista[Math.abs(s) % lista.length]
 
 function segmentoDe(etd, frontera, planta) {
   const d = hoy()
@@ -324,4 +326,67 @@ export function estadoTramite(embarque, ahora) {
 
 export function prioridadDe(embarque) {
   return embarque.delay > 2 ? 'Alta' : embarque.delay > 0 ? 'Media' : 'Baja'
+}
+
+// --- Liberación de documentos de transporte --------------------------------
+// El documento de transporte lo libera la naviera (BL) o el transportista
+// (carta de porte) después del zarpe: antes de eso no existe. Sin el original
+// en mano la aduana de destino no puede liquidar, así que la única acción
+// operativa de la pantalla es recolectarlo.
+
+export const NAVIERAS = ['Maersk', 'MSC', 'HMM', 'CMA CGM', 'ONE']
+export const TRANSPORTISTAS = ['Transportes Rápidos', 'Grupo Cargo', 'Transunión']
+export const ESTADOS_DOCUMENTO = ['Liberado', 'Pendiente', 'Recolectado']
+
+// Dónde está el documento se deduce de dónde va la carga: sin zarpe todavía no
+// existe; entre el zarpe y la aduana está liberado esperando recolecta; y si la
+// carga ya salió de la aduana es porque el original se usó para liquidar.
+const ESTADO_POR_SEGMENTO = {
+  'En Origen': 'Pendiente',
+  'Puerto de Origen': 'Pendiente',
+  'Tránsito Internacional': 'Liberado',
+  'Aduana de Destino': 'Liberado',
+  'Tránsito a Planta': 'Recolectado',
+  'En Planta': 'Recolectado',
+}
+
+/** Misma fecha con una hora determinista: el mock no puede cambiar por render. */
+function conHora(fecha, s) {
+  const d = new Date(fecha)
+  d.setHours(7 + (s % 10), s % 60, 0, 0)
+  return d
+}
+
+/**
+ * Un documento de transporte por embarque. `recolectas` es el mapa del store
+ * (clave → { instruccion, fecha }); lo que ya se recolectó gana sobre el estado
+ * derivado, igual que los checklists del paso 3 mandan sobre el trámite.
+ */
+export function construirDocumentos(embarques, recolectas = {}) {
+  return embarques.map((e) => {
+    const s = semilla(e.clave + 'doc')
+    const terrestre = /El Poy/i.test(e.ruta.frontera)
+    const recolecta = recolectas[e.clave]
+    const emisor = elige(terrestre ? TRANSPORTISTAS : NAVIERAS, s)
+    const base = ESTADO_POR_SEGMENTO[e.segmento] ?? 'Pendiente'
+
+    return {
+      clave: e.clave,
+      embarque: e,
+      emisor,
+      terrestre,
+      documento: terrestre ? 'Carta de porte' : 'BL original / documento de transporte',
+      numero: `${terrestre ? 'CP' : 'BL'}-${225300000 + (s % 99999)}`,
+      origen: `${e.ruta.origen} · ${terrestre ? 'Terminal terrestre' : 'Terminal marítima'}`,
+      destino: `${e.ruta.frontera} · Aduana de destino`,
+      direccion: `Oficina documental ${emisor} · dirección de recolecta registrada`,
+      estado: recolecta ? 'Recolectado' : base,
+      // Se libera un día después del zarpe; antes no hay fecha que mostrar.
+      liberacion: base === 'Pendiente' ? null : conHora(addDays(e.etd, 1), s),
+      recoleccion: recolecta?.fecha ?? (base === 'Recolectado' ? conHora(addDays(e.etd, 2), s) : null),
+      instruccion: recolecta?.instruccion ?? '',
+      // Relevancia = qué tan pronto la aduana necesita el original en mano.
+      relevancia: diasEntre(hoy(), e.frontera) <= 2 || e.delay > 2 ? 'Alta' : 'Media',
+    }
+  })
 }

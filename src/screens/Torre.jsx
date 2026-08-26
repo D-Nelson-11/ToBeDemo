@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import {
   LuBanknote,
   LuBellRing,
   LuCircleCheck,
   LuContainer,
   LuEllipsis,
+  LuFileCheck,
+  LuHandshake,
   LuMapPin,
   LuSearch,
   LuShip,
@@ -17,6 +19,8 @@ import Button, { cx } from '../components/ui/Button'
 import { Select } from '../components/ui/Field'
 import BitacoraAduana from '../components/BitacoraAduana'
 import CostosLogisticos from './CostosLogisticos'
+import LiberacionDocumentos from './LiberacionDocumentos'
+import MerchantCarrier from './MerchantCarrier'
 import DetalleTransito from '../components/DetalleTransito'
 import RielAduana from '../components/RielAduana'
 import RielTransito from '../components/RielTransito'
@@ -27,12 +31,14 @@ import {
   SEGMENTOS,
   construirAlertas,
   construirCostos,
+  construirDocumentos,
   construirEmbarques,
   estadoTramite,
   estatusAduana,
   prioridadDe,
   requisitosDestino,
 } from '../lib/torre'
+import { construirMerchant } from '../lib/merchant'
 import { fmtFechaCorta, fmtNum } from '../lib/fechas'
 
 const ICONO_SEGMENTO = {
@@ -43,7 +49,14 @@ const ICONO_SEGMENTO = {
   'Aduana de Destino': LuBanknote,
   'Tránsito a Planta': LuTruck,
   'En Planta': LuWarehouse,
+  Costos: LuBanknote,
+  Alertas: LuBellRing,
+  Documentos: LuFileCheck,
+  'Merchant/Carrier': LuHandshake,
 }
+
+// Tabs que no listan embarques: son pantallas propias al final de la barra.
+const PAGINAS = ['Costos', 'Alertas', 'Documentos', 'Merchant/Carrier']
 
 const TONO_RIESGO = {
   'Dentro de tiempo': { chip: 'bg-teal-50 text-teal-700', punto: 'bg-teal-600', texto: 'text-teal-700', lomo: 'var(--color-teal-600)' },
@@ -96,7 +109,7 @@ function BarraReq({ items }) {
 }
 
 export default function Torre() {
-  const { ordenes, avisar } = useOc()
+  const { ordenes, recolectas, coordinaciones, finiquitos, avisar } = useOc()
   const [segmento, setSegmento] = useState('Todos')
   const [sitio, setSitio] = useState('')
   const [riesgo, setRiesgo] = useState('')
@@ -109,6 +122,11 @@ export default function Torre() {
   const embarques = useMemo(() => construirEmbarques(ordenes), [ordenes])
   const costos = useMemo(() => construirCostos(embarques), [embarques])
   const alertas = useMemo(() => construirAlertas(embarques), [embarques])
+  const documentos = useMemo(() => construirDocumentos(embarques, recolectas), [embarques, recolectas])
+  const merchant = useMemo(
+    () => construirMerchant(embarques, coordinaciones, finiquitos),
+    [embarques, coordinaciones, finiquitos],
+  )
 
   const sitios = useMemo(() => [...new Set(embarques.map((e) => e.sitio))], [embarques])
 
@@ -139,39 +157,37 @@ export default function Torre() {
 
   const alertasFiltradas = alertas.filter((a) => !nivelFiltro || String(a.nivel) === nivelFiltro)
 
-  const esPagina = segmento === 'Costos' || segmento === 'Alertas'
+  const esPagina = PAGINAS.includes(segmento)
+
+  // El contador de cada página es lo que hay por atender, no el total.
+  const contadorPagina = {
+    Costos: costos.length,
+    Alertas: alertas.length,
+    Documentos: documentos.filter((d) => d.estado === 'Liberado').length,
+    // Lo accionable acá es lo que espera fecha o revisión, no todo el pipeline.
+    'Merchant/Carrier':
+      merchant.precoordinacion.length + merchant.liberados.length + merchant.recibidas.length,
+  }
 
   return (
     <div className="min-h-full">
       <div className="contenedor flex flex-col gap-4 py-4">
         {/* Segmentos del viaje: son el eje de toda la torre */}
-        <div className="flex flex-wrap gap-1.5">
-          {[...SEGMENTOS, 'Costos', 'Alertas'].map((s) => {
-            const Icono = ICONO_SEGMENTO[s] ?? (s === 'Costos' ? LuBanknote : LuBellRing)
+        <div className="tabbar">
+          {[...SEGMENTOS, ...PAGINAS].map((s) => {
+            const Icono = ICONO_SEGMENTO[s]
             const activo = segmento === s
-            const n = s === 'Costos' ? costos.length : s === 'Alertas' ? alertas.length : conteoSegmento[s]
+            const n = contadorPagina[s] ?? conteoSegmento[s]
             return (
-              <button
-                key={s}
-                onClick={() => setSegmento(s)}
-                className={cx(
-                  'inline-flex items-center gap-2 rounded-sm border px-3 py-2 text-sm transition-colors duration-100',
-                  activo
-                    ? 'border-navy-800 bg-navy-800 font-semibold text-white'
-                    : 'border-line bg-surface text-ink-2 hover:border-navy-400 hover:text-ink',
-                )}
-              >
-                <Icono size={13} className={activo ? 'text-white/75' : 'text-ink-4'} />
-                {s}
-                <span
-                  className={cx(
-                    'num rounded-full px-1.5 text-xs font-bold',
-                    activo ? 'bg-white/20 text-white' : 'bg-surface-3 text-ink-3',
-                  )}
-                >
-                  {n}
-                </span>
-              </button>
+              <Fragment key={s}>
+                {/* Los segmentos filtran la misma tabla; las páginas son otra pantalla */}
+                {s === PAGINAS[0] && <span className="my-2 w-px shrink-0 bg-line" />}
+                <button onClick={() => setSegmento(s)} className={cx('tab', activo && 'tab-on')}>
+                  <Icono size={14} className={activo ? 'text-navy-700' : 'text-ink-4'} />
+                  {s}
+                  <span className="tab-n">{n}</span>
+                </button>
+              </Fragment>
             )
           })}
         </div>
@@ -433,6 +449,12 @@ export default function Torre() {
 
         {/* -------------------------------- COSTOS -------------------------------- */}
         {segmento === 'Costos' && <CostosLogisticos />}
+
+        {/* ------------------------------ DOCUMENTOS ------------------------------ */}
+        {segmento === 'Documentos' && <LiberacionDocumentos documentos={documentos} />}
+
+        {/* --------------------------- MERCHANT / CARRIER -------------------------- */}
+        {segmento === 'Merchant/Carrier' && <MerchantCarrier embarques={embarques} />}
 
         {/* ------------------------------- ALERTAS -------------------------------- */}
         {segmento === 'Alertas' && (
