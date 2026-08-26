@@ -14,7 +14,7 @@ const Seguimiento = lazy(() => import('./screens/Seguimiento'))
 const Gestiones = lazy(() => import('./screens/Gestiones'))
 const Torre = lazy(() => import('./screens/Torre'))
 const PortalCliente = lazy(() => import('./screens/PortalCliente'))
-const KpiVolumenes = lazy(() => import('./screens/KpiVolumenes'))
+const Kpi = lazy(() => import('./screens/Kpi'))
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -28,7 +28,7 @@ createRoot(document.getElementById('root')).render(
             <Route path="/gestiones" element={<Gestiones />} />
             <Route path="/torre" element={<Torre />} />
             <Route path="/cliente" element={<PortalCliente />} />
-            <Route path="/kpi" element={<KpiVolumenes />} />
+            <Route path="/kpi" element={<Kpi />} />
             <Route path="*" element={<Navigate to="/orden-compra" replace />} />
           </Route>
         </Routes>

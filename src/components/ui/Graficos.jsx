@@ -208,3 +208,106 @@ export function Lineas({ datos, unidad = '', fmt = (n) => n, alto = 190 }) {
     </div>
   )
 }
+
+/**
+ * Varias series sobre un mismo eje. La segunda va punteada además de con otro
+ * color: si el color no se distingue (daltonismo, impresión), el trazo sí.
+ * `datos` = [{ clave, <idSerie>: valor }], `series` = [{ id, rotulo, color }].
+ */
+export function LineasMulti({ datos, series, fmt = (n) => n, alto = 200 }) {
+  const [sobre, setSobre] = useState(null)
+  if (!datos.length) return <Vacio />
+
+  const max = Math.max(...datos.flatMap((d) => series.map((s) => d[s.id])), 1)
+  const n = datos.length
+  const px = (i) => (n === 1 ? 50 : (i / (n - 1)) * 100)
+  const py = (v) => 100 - (v / max) * 100
+  const altoTrazo = alto - 26
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="relative" style={{ height: alto }}>
+        {sobre !== null && (
+          <span
+            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-sm bg-navy-800 px-2 py-1.5 text-xs text-white shadow-[0_6px_16px_-6px_rgba(0,28,44,0.6)]"
+            style={{ left: `${px(sobre)}%`, top: 10 }}
+          >
+            <b className="mb-0.5 block font-bold">{datos[sobre].clave}</b>
+            {series.map((s) => (
+              <span key={s.id} className="flex items-center gap-1.5">
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.color }} />
+                {s.rotulo}: <b className="num font-bold">{fmt(datos[sobre][s.id])}</b>
+              </span>
+            ))}
+          </span>
+        )}
+
+        <svg
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          className="block w-full"
+          style={{ height: altoTrazo }}
+          aria-hidden="true"
+        >
+          {[0, 25, 50, 75, 100].map((y) => (
+            <line key={y} x1="0" y1={y} x2="100" y2={y} stroke="var(--color-line-soft)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+          ))}
+          {series.map((s, i) => (
+            <polyline
+              key={s.id}
+              points={datos.map((d, j) => `${px(j)},${py(d[s.id])}`).join(' ')}
+              fill="none"
+              stroke={s.color}
+              strokeWidth="2"
+              strokeDasharray={i === 0 ? undefined : '6 4'}
+              vectorEffect="non-scaling-stroke"
+              strokeLinejoin="round"
+            />
+          ))}
+        </svg>
+
+        <div className="absolute inset-x-0 top-0 flex" style={{ height: altoTrazo }}>
+          {datos.map((d, i) => (
+            <span
+              key={d.clave}
+              onMouseEnter={() => setSobre(i)}
+              onMouseLeave={() => setSobre(null)}
+              className="relative min-w-0 flex-1 cursor-default"
+            >
+              {series.map((s) => (
+                <span
+                  key={s.id}
+                  className={cx(
+                    'absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white transition-transform duration-100',
+                    sobre === i && 'scale-125',
+                  )}
+                  style={{ left: '50%', top: `${py(d[s.id])}%`, background: s.color }}
+                />
+              ))}
+            </span>
+          ))}
+        </div>
+
+        <div className="absolute inset-x-0 bottom-0 flex">
+          {datos.map((d) => (
+            <span key={d.clave} className="num min-w-0 flex-1 truncate text-center text-xs text-ink-3">
+              {d.clave}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* La leyenda lleva el último valor: la identidad nunca queda solo en el color */}
+      <div className="flex flex-wrap gap-x-5 gap-y-1.5">
+        {series.map((s) => (
+          <span key={s.id} className="flex items-baseline gap-2 text-sm">
+            <span className="h-2.5 w-2.5 shrink-0 translate-y-px rounded-xs" style={{ background: s.color }} />
+            <span className="text-ink-2">{s.rotulo}</span>
+            <b className="num font-bold text-ink">{fmt(datos[datos.length - 1][s.id])}</b>
+            <span className="text-xs text-ink-3">al cierre</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
