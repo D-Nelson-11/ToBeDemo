@@ -4,13 +4,13 @@ import { addDays, diasEntre, fmtDuracion, hoy, parseISO } from './fechas'
 // Segmentos del viaje. Son los mismos botones de la torre y salen de comparar
 // la fecha de hoy contra los hitos de la ruta, no de un campo de estado.
 export const SEGMENTOS = [
-  'Todos',
-  'En Origen',
-  'Puerto de Origen',
-  'Tránsito Internacional',
-  'Aduana de Destino',
-  'Tránsito a Planta',
-  'En Planta',
+  'All',
+  'Origin',
+  'Port of Loading',
+  'International Transit',
+  'Customs Clearance',
+  'Last Mile',
+  'At Plant',
 ]
 
 export const RIESGOS = ['Dentro de tiempo', 'En riesgo', 'Fuera de tiempo']
@@ -33,22 +33,22 @@ export const elige = (lista, s) => lista[Math.abs(s) % lista.length]
 
 function segmentoDe(etd, frontera, planta) {
   const d = hoy()
-  if (!etd) return 'En Origen'
-  if (d < addDays(etd, -1)) return 'En Origen'
-  if (d < etd) return 'Puerto de Origen'
-  if (d < frontera) return 'Tránsito Internacional'
-  if (d < addDays(frontera, DIAS_ADUANA)) return 'Aduana de Destino'
-  if (d < planta) return 'Tránsito a Planta'
-  return 'En Planta'
+  if (!etd) return 'Origin'
+  if (d < addDays(etd, -1)) return 'Origin'
+  if (d < etd) return 'Port of Loading'
+  if (d < frontera) return 'International Transit'
+  if (d < addDays(frontera, DIAS_ADUANA)) return 'Customs Clearance'
+  if (d < planta) return 'Last Mile'
+  return 'At Plant'
 }
 
 const UBICACION = {
-  'En Origen': (r) => r.origen,
-  'Puerto de Origen': (r) => r.origen,
-  'Tránsito Internacional': () => 'En ruta',
-  'Aduana de Destino': (r) => `Aduana ${r.frontera}`,
-  'Tránsito a Planta': (r, oc) => `${r.frontera} → ${oc.centro}`,
-  'En Planta': (r, oc) => oc.centro,
+  Origin: (r) => r.origen,
+  'Port of Loading': (r) => r.origen,
+  'International Transit': () => 'En ruta',
+  'Customs Clearance': (r) => `Aduana ${r.frontera}`,
+  'Last Mile': (r, oc) => `${r.frontera} → ${oc.centro}`,
+  'At Plant': (r, oc) => oc.centro,
 }
 
 /** Un embarque de la torre por cada despacho programado. */
@@ -342,12 +342,12 @@ export const ESTADOS_DOCUMENTO = ['Liberado', 'Pendiente', 'Recolectado']
 // existe; entre el zarpe y la aduana está liberado esperando recolecta; y si la
 // carga ya salió de la aduana es porque el original se usó para liquidar.
 const ESTADO_POR_SEGMENTO = {
-  'En Origen': 'Pendiente',
-  'Puerto de Origen': 'Pendiente',
-  'Tránsito Internacional': 'Liberado',
-  'Aduana de Destino': 'Liberado',
-  'Tránsito a Planta': 'Recolectado',
-  'En Planta': 'Recolectado',
+  Origin: 'Pendiente',
+  'Port of Loading': 'Pendiente',
+  'International Transit': 'Liberado',
+  'Customs Clearance': 'Liberado',
+  'Last Mile': 'Recolectado',
+  'At Plant': 'Recolectado',
 }
 
 /** Misma fecha con una hora determinista: el mock no puede cambiar por render. */

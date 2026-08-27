@@ -28,10 +28,10 @@ export const fechaLiberacion = (embarque) => addDays(embarque.frontera, DIAS_ADU
  * haberse coordinado antes. `null` = todavía no hay coordinación.
  */
 function coordinacionBase(e) {
-  if (e.segmento === 'En Planta') return 'Confirmado'
+  if (e.segmento === 'At Plant') return 'Confirmado'
   // El tramo a planta es donde vive la acción: liberado y sin fecha de recepción.
-  if (e.segmento === 'Tránsito a Planta') return null
-  if (e.segmento === 'Aduana de Destino' && etapaTramite(e) >= 3) return 'Por revisar'
+  if (e.segmento === 'Last Mile') return null
+  if (e.segmento === 'Customs Clearance' && etapaTramite(e) >= 3) return 'Por revisar'
   return null
 }
 
@@ -69,8 +69,8 @@ export function transporteDe(e, coordinacion) {
 // Hasta qué etapa de la bitácora llegó el embarque. Sale del segmento del viaje
 // y del estado de la coordinación; no hay un campo aparte que mantener.
 function etapaTransporte(e, coordinacion) {
-  if (e.segmento === 'En Planta') return e.delay > 0 ? 6 : 7
-  if (e.segmento === 'Tránsito a Planta') return 4
+  if (e.segmento === 'At Plant') return e.delay > 0 ? 6 : 7
+  if (e.segmento === 'Last Mile') return 4
   if (!coordinacion) return 0
   return coordinacion.estado === 'Por revisar' ? 1 : 3
 }
@@ -94,7 +94,7 @@ export function estadoTransporte(e, coordinacion) {
 export function bitacoraTransporte(e, coordinacion) {
   const actual = etapaTransporte(e, coordinacion)
   const s = semilla(e.clave + 'bitacora')
-  const ancla = e.segmento === 'En Planta' ? e.planta : hoy()
+  const ancla = e.segmento === 'At Plant' ? e.planta : hoy()
   return ETAPAS_TRANSPORTE.map((etapa, i) => {
     const estado = i < actual ? 'Completado' : i === actual ? 'En curso' : 'Pendiente'
     const fecha = estado === 'Pendiente' ? null : addDays(ancla, i - actual)
@@ -180,11 +180,11 @@ export function construirMerchant(embarques, coordinaciones = {}, finiquitos = {
     }
 
     // Pre-coordinación: todavía en aduana o en camino a ella, sin coordinar.
-    if (!coordinacion && ['Tránsito Internacional', 'Aduana de Destino'].includes(e.segmento))
+    if (!coordinacion && ['International Transit', 'Customs Clearance'].includes(e.segmento))
       precoordinacion.push({ ...fila, pct: porcentajeLiberacion(e), liberacion: fechaLiberacion(e) })
 
     // Liberados: ya salieron de aduana y les falta fecha de recepción.
-    if (!coordinacion && e.segmento === 'Tránsito a Planta')
+    if (!coordinacion && e.segmento === 'Last Mile')
       liberados.push({ ...fila, liberacion: fechaLiberacion(e) })
 
     if (coordinacion?.estado === 'Por revisar') recibidas.push(fila)
@@ -196,7 +196,7 @@ export function construirMerchant(embarques, coordinaciones = {}, finiquitos = {
         estadoTransporte: estadoTransporte(e, coordinacion),
       })
 
-    if (e.segmento === 'En Planta') {
+    if (e.segmento === 'At Plant') {
       const costos = costosEntrega(e)
       const estatus = finiquitos[e.clave] ?? finiquitoBase(e, costos)
       entregados.push({

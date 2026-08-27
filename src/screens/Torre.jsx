@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import {
   LuBanknote,
   LuBellRing,
@@ -42,13 +42,13 @@ import { construirMerchant } from '../lib/merchant'
 import { fmtFechaCorta, fmtNum } from '../lib/fechas'
 
 const ICONO_SEGMENTO = {
-  Todos: LuContainer,
-  'En Origen': LuWarehouse,
-  'Puerto de Origen': LuContainer,
-  'Tránsito Internacional': LuShip,
-  'Aduana de Destino': LuBanknote,
-  'Tránsito a Planta': LuTruck,
-  'En Planta': LuWarehouse,
+  All: LuContainer,
+  Origin: LuWarehouse,
+  'Port of Loading': LuContainer,
+  'International Transit': LuShip,
+  'Customs Clearance': LuBanknote,
+  'Last Mile': LuTruck,
+  'At Plant': LuWarehouse,
   Costos: LuBanknote,
   Alertas: LuBellRing,
   Documentos: LuFileCheck,
@@ -110,14 +110,30 @@ function BarraReq({ items }) {
 
 export default function Torre() {
   const { ordenes, recolectas, coordinaciones, finiquitos, avisar } = useOc()
-  const [segmento, setSegmento] = useState('Todos')
+  const [segmento, setSegmento] = useState('All')
   const [sitio, setSitio] = useState('')
   const [riesgo, setRiesgo] = useState('')
   const [q, setQ] = useState('')
   const [nivelFiltro, setNivelFiltro] = useState('')
   const [detalle, setDetalle] = useState(null)
-  const enTramite = detalle?.segmento === 'Aduana de Destino'
-  const enTransito = detalle?.segmento === 'Tránsito Internacional'
+  const enTramite = detalle?.segmento === 'Customs Clearance'
+  const enTransito = detalle?.segmento === 'International Transit'
+
+  // La rueda del mouse manda deltaY y la tabbar solo desborda en X: sin esto el
+  // scroll se lo lleva la pagina y los tabs no se mueven.
+  const tabbar = useRef(null)
+  useEffect(() => {
+    const el = tabbar.current
+    const alRodar = (e) => {
+      // Trackpad horizontal ya funciona solo; y si los tabs caben, no secuestrar la pagina.
+      if (e.deltaX || el.scrollWidth <= el.clientWidth) return
+      el.scrollLeft += e.deltaY
+      e.preventDefault()
+    }
+    // passive: false porque React registra onWheel como pasivo y ahi preventDefault no corre.
+    el.addEventListener('wheel', alRodar, { passive: false })
+    return () => el.removeEventListener('wheel', alRodar)
+  }, [])
 
   const embarques = useMemo(() => construirEmbarques(ordenes), [ordenes])
   const costos = useMemo(() => construirCostos(embarques), [embarques])
@@ -134,7 +150,7 @@ export default function Torre() {
     const t = q.toLowerCase().trim()
     return embarques.filter(
       (e) =>
-        (segmento === 'Todos' || e.segmento === segmento) &&
+        (segmento === 'All' || e.segmento === segmento) &&
         (!sitio || e.sitio === sitio) &&
         (!riesgo || e.riesgo === riesgo) &&
         (!t ||
@@ -145,13 +161,13 @@ export default function Torre() {
   }, [embarques, segmento, sitio, riesgo, q])
 
   const conteoSegmento = useMemo(() => {
-    const c = { Todos: embarques.length }
+    const c = { All: embarques.length }
     SEGMENTOS.slice(1).forEach((s) => (c[s] = embarques.filter((e) => e.segmento === s).length))
     return c
   }, [embarques])
 
   const enAduana = useMemo(
-    () => embarques.filter((e) => e.segmento === 'Aduana de Destino'),
+    () => embarques.filter((e) => e.segmento === 'Customs Clearance'),
     [embarques],
   )
 
@@ -173,7 +189,7 @@ export default function Torre() {
     <div className="min-h-full">
       <div className="contenedor flex flex-col gap-4 py-4">
         {/* Segmentos del viaje: son el eje de toda la torre */}
-        <div className="tabbar">
+        <div ref={tabbar} className="tabbar">
           {[...SEGMENTOS, ...PAGINAS].map((s) => {
             const Icono = ICONO_SEGMENTO[s]
             const activo = segmento === s
@@ -211,7 +227,7 @@ export default function Torre() {
             <div className="panel">
               <div className="panel-head">
                 <span className="panel-title">
-                  Embarques — {segmento === 'Todos' ? 'todos los segmentos' : segmento}
+                  Embarques — {segmento === 'All' ? 'todos los segmentos' : segmento}
                 </span>
                 <div className="ml-auto flex flex-wrap items-center gap-2">
                   <Select
@@ -375,7 +391,7 @@ export default function Torre() {
             </div>
 
             {/* La aduana de destino tiene su propio trámite por embarque */}
-            {segmento === 'Aduana de Destino' && (
+            {segmento === 'Customs Clearance' && (
               <div className="flex flex-col gap-4">
                 {enAduana.length === 0 && (
                   <div className="panel p-4 text-sm text-ink-3">

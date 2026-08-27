@@ -15,9 +15,9 @@ const MOTIVO = {
 
 // En qué etapa del viaje mira el comprador cada segmento de la torre.
 const ETAPAS = {
-  transito: ['Puerto de Origen', 'Tránsito Internacional', 'Tránsito a Planta'],
-  aduana: ['Aduana de Destino'],
-  planta: ['En Planta'],
+  transito: ['Port of Loading', 'International Transit', 'Last Mile'],
+  aduana: ['Customs Clearance'],
+  planta: ['At Plant'],
 }
 
 const cantidadOc = (oc) => oc.materiales.reduce((s, m) => s + m.cantidad, 0)

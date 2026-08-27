@@ -19,17 +19,17 @@ import { useOc } from '../data/store'
 import { cx } from './ui/Button'
 
 export const PASOS = [
-  { paso: 1, to: '/orden-compra', titulo: 'Crear Orden de Compra' },
-  { paso: 2, to: '/despachos', titulo: 'Administracion de orden de compra' },
-  { paso: 3, to: '/seguimiento', titulo: 'Planificacion de abasto' },
-  { paso: 4, to: '/gestiones', titulo: 'Crear instrucciones' },
+  { paso: 1, to: '/orden-compra', titulo: 'New Purchase order' },
+  { paso: 2, to: '/despachos', titulo: 'Purchase Order Managerment' },
+  { paso: 3, to: '/seguimiento', titulo: 'Supply Scheduling ' },
+  { paso: 4, to: '/gestiones', titulo: 'Shipping Instruction' },
 ]
 
 // Dos módulos: el flujo paso a paso y la vista de monitoreo.
 export const MODULOS = [
   {
     id: 'flujo',
-    titulo: 'Planificación de Suministros',
+    titulo: 'Supply Hub',
     sub: 'Flujo paso a paso',
     icono: LuWorkflow,
     to: PASOS[0].to,
@@ -37,7 +37,7 @@ export const MODULOS = [
   },
   {
     id: 'torre',
-    titulo: 'Torre de control',
+    titulo: 'Control Tower ',
     sub: 'Monitoreo de embarques',
     icono: LuTowerControl,
     to: '/torre',
@@ -45,7 +45,7 @@ export const MODULOS = [
   },
   {
     id: 'kpi',
-    titulo: 'KPI',
+    titulo: 'Performance Compass',
     sub: 'Indicadores de volumen',
     icono: LuChartColumn,
     to: '/kpi',
