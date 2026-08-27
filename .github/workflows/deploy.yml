@@ -20,9 +20,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Sin `version`: la toma de "packageManager" en package.json, que es la
+      # unica fuente; declararla en los dos lados aborta el job.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 11
 
       - uses: actions/setup-node@v4
         with:
