@@ -186,7 +186,7 @@ export const VISTAS_COSTOS = {
           "acciones": [
             "Detalle",
             "Validar",
-            " Aprobar"
+            "Aprobar"
           ]
         }
       ],
@@ -243,7 +243,7 @@ export const VISTAS_COSTOS = {
           "acciones": [
             "Detalle",
             "Validar",
-            " Aprobar"
+            "Aprobar"
           ]
         }
       ],
@@ -300,7 +300,7 @@ export const VISTAS_COSTOS = {
           "acciones": [
             "Detalle",
             "Validar",
-            " Aprobar"
+            "Aprobar"
           ]
         }
       ],
@@ -357,7 +357,7 @@ export const VISTAS_COSTOS = {
           "acciones": [
             "Detalle",
             "Validar",
-            " Aprobar"
+            "Aprobar"
           ]
         }
       ],
@@ -414,7 +414,7 @@ export const VISTAS_COSTOS = {
           "acciones": [
             "Detalle",
             "Validar",
-            " Aprobar"
+            "Aprobar"
           ]
         }
       ],
@@ -471,7 +471,7 @@ export const VISTAS_COSTOS = {
           "acciones": [
             "Detalle",
             "Validar",
-            " Aprobar"
+            "Aprobar"
           ]
         }
       ],
@@ -528,7 +528,7 @@ export const VISTAS_COSTOS = {
           "acciones": [
             "Detalle",
             "Validar",
-            " Aprobar"
+            "Aprobar"
           ]
         }
       ],
@@ -585,7 +585,7 @@ export const VISTAS_COSTOS = {
           "acciones": [
             "Detalle",
             "Validar",
-            " Aprobar"
+            "Aprobar"
           ]
         }
       ]

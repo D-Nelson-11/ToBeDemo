@@ -31,7 +31,17 @@ const TONO_PUNTO = {
   azul: 'bg-navy-600',
 }
 
-const ACCION_TONO = { Validar: 'text-teal-700', Aprobar: 'text-navy-700', Revisar: 'text-navy-700' }
+// El rótulo que se ve y se lee en el aviso; la clave es la que traen los datos.
+const ACCION = {
+  Detalle: { rotulo: 'Detalle', tono: 'text-ink-2' },
+  Validar: { rotulo: 'Validar', tono: 'text-teal-700' },
+  Aprobar: { rotulo: 'Solicitar aprobación', tono: 'text-navy-700' },
+  Escalar: { rotulo: 'Escalar', tono: 'text-rojo-700' },
+  Revisar: { rotulo: 'Revisar', tono: 'text-navy-700' },
+  Seguimiento: { rotulo: 'Seguimiento', tono: 'text-ink-2' },
+  Intervenir: { rotulo: 'Intervenir', tono: 'text-ambar-700' },
+  'Ver / actuar': { rotulo: 'Ver / actuar', tono: 'text-navy-700' },
+}
 
 // Las seis acciones masivas del Resumen; en la demo cada una deja su aviso.
 const ACCIONES = [
@@ -115,19 +125,26 @@ function Nota({ nota }) {
 function Celda({ celda, onAccion }) {
   if (celda.acciones)
     return (
-      <div className="flex flex-wrap gap-1.5">
-        {celda.acciones.map((a) => (
-          <button
-            key={a}
-            onClick={() => onAccion(a)}
-            className={cx(
-              'rounded-xs border border-line bg-surface px-2 py-[3px] text-xs font-semibold transition-colors duration-100 hover:bg-surface-2',
-              ACCION_TONO[a] ?? 'text-ink-2',
-            )}
-          >
-            {a}
-          </button>
-        ))}
+      // Nunca se apilan: la fila mide 36px y la columna cede antes que el botón.
+      <div className="flex flex-nowrap items-center gap-1.5">
+        {celda.acciones.map((a) => {
+          // El dato del mockup trae espacios sueltos: sin trim no matchea el mapa.
+          const clave = a.trim()
+          const { rotulo = clave, tono = 'text-ink-2' } = ACCION[clave] ?? {}
+          return (
+            <button
+              key={a}
+              onClick={() => onAccion(clave)}
+              title={rotulo}
+              className={cx(
+                'whitespace-nowrap rounded-xs border border-line bg-surface px-2 py-[3px] text-xs font-semibold transition-colors duration-100 hover:border-line-strong hover:bg-surface-2',
+                tono,
+              )}
+            >
+              {rotulo}
+            </button>
+          )
+        })}
       </div>
     )
 
@@ -337,7 +354,10 @@ export default function CostosLogisticos() {
                           a === 'Detalle'
                             ? setDetalle({ vista: v, fila: f })
                             : avisar(
-                                a + ' · ' + (f[0]?.texto ?? '') + ' — registrado en la bitácora (demo).',
+                                (ACCION[a]?.rotulo ?? a) +
+                                  ' · ' +
+                                  (f[0]?.texto ?? '') +
+                                  ' — registrado en la bitácora (demo).',
                                 'alerta',
                               )
                         }

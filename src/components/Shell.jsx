@@ -1,13 +1,16 @@
 import { Fragment, Suspense, useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
+  LuBanknote,
   LuBriefcase,
   LuChartColumn,
   LuCheck,
   LuChevronDown,
   LuCircleAlert,
   LuCircleCheck,
+  LuGauge,
   LuLogOut,
+  LuPackageCheck,
   LuPanelLeftClose,
   LuPanelLeftOpen,
   LuTowerControl,
@@ -53,15 +56,45 @@ export const MODULOS = [
   },
 ]
 
-// Lo que ve el cliente: sus cuatro pantallas en un solo módulo con pestañas.
+// Lo que ve el cliente: una pantalla por módulo, igual que el especialista.
 export const MODULOS_CLIENTE = [
   {
-    id: 'cliente',
-    titulo: 'Portal del cliente',
-    sub: 'Planning, torre, costos y entrega',
-    icono: LuBriefcase,
-    to: '/cliente',
-    rutas: ['/cliente'],
+    id: 'cliente-planning',
+    titulo: 'Planning',
+    sub: 'Programación y cobertura',
+    icono: LuGauge,
+    to: '/cliente/planning',
+    rutas: ['/cliente/planning'],
+  },
+  {
+    id: 'cliente-torre',
+    titulo: 'Compras',
+    sub: 'Seguimiento por pedido',
+    icono: LuTowerControl,
+    to: '/cliente/torre',
+    rutas: ['/cliente/torre'],
+  },
+  {
+    id: 'cliente-logistica',
+    titulo: 'Logistica',
+    sub: 'Tránsito, costos y entrega',
+    icono: LuBanknote,
+    to: '/cliente/logistica/transito',
+    rutas: ['/cliente/logistica'],
+    // Único módulo con submenú: sus tres pantallas se despliegan en el sidebar.
+    hijos: [
+      { rotulo: 'Embarques en tránsito', to: '/cliente/logistica/transito' },
+      { rotulo: 'Embarques con costos', to: '/cliente/logistica/costos' },
+      { rotulo: 'Merchant/Carrier', to: '/cliente/logistica/merchant' },
+    ],
+  },
+  {
+    id: 'cliente-entregable',
+    titulo: 'Entregable',
+    sub: 'Volumen, costos y desempeño',
+    icono: LuPackageCheck,
+    to: '/cliente/entregable',
+    rutas: ['/cliente/entregable'],
   },
 ]
 
@@ -197,6 +230,8 @@ export default function Shell() {
   const navigate = useNavigate()
   const { avisos, vista, setVista } = useOc()
   const [plegado, setPlegado] = useState(false)
+  // Solo guarda lo que el usuario plegó o desplegó a mano; el resto sigue la ruta.
+  const [desplegado, setDesplegado] = useState({})
 
   // Cambiar de vista tiene que mover la ruta: si no, el header dice una cosa y
   // el <Outlet/> sigue mostrando la pantalla del portal anterior.
@@ -210,6 +245,7 @@ export default function Shell() {
   const modulos = vistaActual.modulos
   // Sin módulos no hay módulo activo: el header y el main lo tienen que contemplar.
   const modulo = modulos.find((m) => m.rutas.some((r) => pathname.startsWith(r))) ?? modulos[0] ?? null
+  const hijoActivo = modulo?.hijos?.find((h) => pathname.startsWith(h.to))
   const idxPaso = Math.max(
     0,
     PASOS.findIndex((p) => pathname.startsWith(p.to)),
@@ -252,34 +288,90 @@ export default function Shell() {
               Esta vista todavía no tiene módulos.
             </span>
           )}
-          {modulos.map(({ id, titulo, sub, icono: Icono, to }) => {
+          {modulos.map(({ id, titulo, sub, icono: Icono, to, hijos }) => {
             const activo = modulo?.id === id
+            // Abierto por defecto el módulo en el que estás, hasta que lo toques.
+            const abierto = desplegado[id] ?? activo
             return (
-              <NavLink
-                key={id}
-                to={to}
-                title={plegado ? titulo + ' · ' + sub : undefined}
-                className={cx(
-                  'relative flex items-center gap-2.5 rounded-sm px-2.5 py-2.5 no-underline transition-colors duration-100',
-                  activo ? 'bg-white/18 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white',
-                  activo &&
-                    'before:absolute before:-left-2 before:inset-y-1.5 before:w-[3px] before:rounded-r-sm before:bg-rojo-600',
-                )}
-              >
-                <Icono size={17} strokeWidth={1.9} className="shrink-0" />
-                <span
+              <Fragment key={id}>
+                <NavLink
+                  to={to}
+                  title={plegado ? titulo + ' · ' + sub : undefined}
                   className={cx(
-                    'min-w-0 flex-1 overflow-hidden whitespace-nowrap',
-                    'transition-opacity duration-150 ease-[var(--ease-out-soft)]',
-                    plegado && 'pointer-events-none opacity-0',
+                    'relative flex items-center gap-2.5 rounded-sm px-2.5 py-2.5 no-underline transition-colors duration-100',
+                    activo ? 'bg-white/18 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white',
+                    activo &&
+                      'before:absolute before:-left-2 before:inset-y-1.5 before:w-[3px] before:rounded-r-sm before:bg-rojo-600',
                   )}
                 >
-                  <span className={cx('block text-base', activo ? 'font-bold' : 'font-medium')}>
-                    {titulo}
+                  <Icono size={17} strokeWidth={1.9} className="shrink-0" />
+                  <span
+                    className={cx(
+                      'min-w-0 flex-1 overflow-hidden whitespace-nowrap',
+                      'transition-opacity duration-150 ease-[var(--ease-out-soft)]',
+                      plegado && 'pointer-events-none opacity-0',
+                    )}
+                  >
+                    <span className={cx('block text-base', activo ? 'font-bold' : 'font-medium')}>
+                      {titulo}
+                    </span>
+                    <span className="block text-xs text-white/65">{sub}</span>
                   </span>
-                  <span className="block text-xs text-white/65">{sub}</span>
-                </span>
-              </NavLink>
+
+                  {/* La flecha avisa que hay submenú; el clic pliega sin navegar */}
+                  {hijos && !plegado && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setDesplegado((prev) => ({ ...prev, [id]: !abierto }))
+                      }}
+                      aria-label={abierto ? 'Plegar ' + titulo : 'Desplegar ' + titulo}
+                      aria-expanded={abierto}
+                      className="-mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-white/70 transition-colors duration-100 hover:bg-white/15 hover:text-white"
+                    >
+                      <LuChevronDown
+                        size={15}
+                        className={cx(
+                          'transition-transform duration-200 ease-[var(--ease-out-soft)] motion-reduce:transition-none',
+                          abierto && 'rotate-180',
+                        )}
+                      />
+                    </button>
+                  )}
+                </NavLink>
+
+                {/* Se anima la altura con grid: 0fr → 1fr no necesita medir el alto */}
+                {hijos && !plegado && (
+                  <div
+                    className={cx(
+                      'grid transition-[grid-template-rows,opacity] duration-200 ease-[var(--ease-out-soft)] motion-reduce:transition-none',
+                      abierto ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+                    )}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="mb-1 ml-[19px] flex flex-col border-l border-white/20 pl-2">
+                        {hijos.map((h) => (
+                          <NavLink
+                            key={h.to}
+                            to={h.to}
+                            tabIndex={abierto ? undefined : -1}
+                            className={({ isActive }) =>
+                              cx(
+                                'rounded-sm px-2.5 py-1.5 text-sm no-underline transition-colors duration-100',
+                                isActive
+                                  ? 'bg-white/15 font-bold text-white'
+                                  : 'text-white/70 hover:bg-white/10 hover:text-white',
+                              )
+                            }
+                          >
+                            {h.rotulo}
+                          </NavLink>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </Fragment>
             )
           })}
         </div>
@@ -295,7 +387,8 @@ export default function Shell() {
               {modulo ? modulo.titulo : vistaActual.rotulo}
             </h1>
             <span className="block text-sm text-ink-3">
-              {modulo ? modulo.sub : 'Sin módulos habilitados'}
+              {/* Dentro de un submenú el subtítulo dice la pantalla, no el módulo */}
+              {modulo ? (hijoActivo?.rotulo ?? modulo.sub) : 'Sin módulos habilitados'}
             </span>
           </div>
 

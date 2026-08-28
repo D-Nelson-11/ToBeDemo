@@ -20,6 +20,7 @@ import { Dato, Kpi } from '../components/ui/Valores'
 import { useOc } from '../data/store'
 import { ESTADOS_FINIQUITO, PASO_FINIQUITO, VENTANAS } from '../data/merchant'
 import { bitacoraTransporte, construirMerchant } from '../lib/merchant'
+import { construirEmbarques } from '../lib/torre'
 import { fmtFecha, fmtFechaCorta, fmtFechaHora, fmtMoneda, toISO } from '../lib/fechas'
 
 const SUBS = [
@@ -170,8 +171,8 @@ function Bitacora({ etapas }) {
  * Merchant / Carrier: coordinar la entrega antes de que la aduana libere, y
  * seguirla hasta el finiquito de los costos excedidos.
  */
-export default function MerchantCarrier({ embarques }) {
-  const { coordinaciones, coordinarEntrega, finiquitos, avanzarFiniquito, avisar } = useOc()
+export default function MerchantCarrier({ embarques: embarquesProp }) {
+  const { ordenes, coordinaciones, coordinarEntrega, finiquitos, avanzarFiniquito, avisar } = useOc()
   const [sub, setSub] = useState('pre')
   const [q, setQ] = useState('')
   const [filtro, setFiltro] = useState('')
@@ -181,6 +182,11 @@ export default function MerchantCarrier({ embarques }) {
   const [transporte, setTransporte] = useState(null)
   const [finiquito, setFiniquito] = useState(null)
 
+  // La torre ya los tiene armados y los pasa; en su ruta propia se arman acá.
+  const embarques = useMemo(
+    () => embarquesProp ?? construirEmbarques(ordenes),
+    [embarquesProp, ordenes],
+  )
   const vistas = useMemo(
     () => construirMerchant(embarques, coordinaciones, finiquitos),
     [embarques, coordinaciones, finiquitos],

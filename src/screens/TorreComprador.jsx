@@ -16,7 +16,7 @@ import Button, { cx } from '../components/ui/Button'
 import { Kpi } from '../components/ui/Valores'
 import { useOc } from '../data/store'
 import { construirComprador } from '../lib/comprador'
-import { NIVELES, construirAlertas } from '../lib/torre'
+import { NIVELES, construirAlertas, construirEmbarques } from '../lib/torre'
 import { fmtFechaCorta, fmtNum } from '../lib/fechas'
 
 const VISTAS = [
@@ -99,11 +99,13 @@ function Tabla({ columnas, filas, vacio, children }) {
 }
 
 /** Torre del comprador: la misma operación, contada desde el pedido. */
-export default function TorreComprador({ embarques }) {
+export default function TorreComprador() {
   const { ordenes, avisar } = useOc()
   const [vista, setVista] = useState('resumen')
   const [q, setQ] = useState('')
 
+  // Ya no llega por prop del portal: la pantalla es su propia ruta.
+  const embarques = useMemo(() => construirEmbarques(ordenes), [ordenes])
   const d = useMemo(() => construirComprador(ordenes, embarques), [ordenes, embarques])
   const alertas = useMemo(() => construirAlertas(embarques), [embarques])
 
