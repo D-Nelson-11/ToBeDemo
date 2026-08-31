@@ -17,6 +17,7 @@ import {
   LuTriangleAlert,
   LuUserCog,
   LuWorkflow,
+  LuX,
 } from 'react-icons/lu'
 import { useOc } from '../data/store'
 import { cx } from './ui/Button'
@@ -212,6 +213,16 @@ function Cargando() {
   )
 }
 
+/** Cubre la pantalla mientras se pasa de un paso del Supply Hub al siguiente. */
+function TransicionPaso({ mensaje }) {
+  return (
+    <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center gap-4 bg-navy-800 text-white motion-safe:animate-[fade_200ms_var(--ease-out-soft)]">
+      <span className="h-8 w-8 animate-spin rounded-full border-[3px] border-white/25 border-t-white" />
+      <span className="text-base font-medium">{mensaje}</span>
+    </div>
+  )
+}
+
 /** Lo que se ve mientras una vista no tenga módulos. */
 function SinModulos({ vista }) {
   return (
@@ -228,7 +239,7 @@ function SinModulos({ vista }) {
 export default function Shell() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const { avisos, vista, setVista } = useOc()
+  const { avisos, descartarAviso, vista, setVista, transicion } = useOc()
   const [plegado, setPlegado] = useState(false)
   // Solo guarda lo que el usuario plegó o desplegó a mano; el resto sigue la ruta.
   const [desplegado, setDesplegado] = useState({})
@@ -474,24 +485,57 @@ export default function Shell() {
         </main>
       </div>
 
+      {/* Avisos de "esto se creó": arriba al centro, grandes y con botón de cerrar */}
+      <div
+        role="status"
+        aria-live="polite"
+        className="fixed left-1/2 top-4 z-[250] flex w-[min(92vw,480px)] -translate-x-1/2 flex-col gap-2"
+      >
+        {avisos
+          .filter((a) => a.destacado)
+          .map((a) => {
+            const { icono: Icono, color } = AVISO[a.tono] ?? AVISO.ok
+            return (
+              <div
+                key={a.id}
+                className="flex items-start gap-3 rounded-md border border-white/10 bg-navy-800 px-4 py-3 text-base leading-snug text-white shadow-[0_16px_40px_-12px_rgba(0,28,44,0.6)] motion-safe:animate-[rise_170ms_var(--ease-out-soft)]"
+              >
+                <Icono size={18} className={cx('mt-0.5 shrink-0', color)} />
+                <span className="min-w-0 flex-1 font-medium">{a.texto}</span>
+                <button
+                  onClick={() => descartarAviso(a.id)}
+                  aria-label="Descartar aviso"
+                  className="-mr-1 -mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-white/70 transition-colors duration-100 hover:bg-white/15 hover:text-white"
+                >
+                  <LuX size={14} />
+                </button>
+              </div>
+            )
+          })}
+      </div>
+
       <div
         role="status"
         aria-live="polite"
         className="fixed bottom-5 right-5 z-[200] flex max-w-[380px] flex-col gap-2"
       >
-        {avisos.map((a) => {
-          const { icono: Icono, color } = AVISO[a.tono] ?? AVISO.ok
-          return (
-            <div
-              key={a.id}
-              className="flex items-start gap-2.5 rounded-sm bg-navy-800 px-3 py-2.5 text-sm leading-snug text-white shadow-[0_10px_28px_-10px_rgba(0,28,44,0.55)] motion-safe:animate-[rise_170ms_var(--ease-out-soft)]"
-            >
-              <Icono size={15} className={cx('mt-px shrink-0', color)} />
-              <span>{a.texto}</span>
-            </div>
-          )
-        })}
+        {avisos
+          .filter((a) => !a.destacado)
+          .map((a) => {
+            const { icono: Icono, color } = AVISO[a.tono] ?? AVISO.ok
+            return (
+              <div
+                key={a.id}
+                className="flex items-start gap-2.5 rounded-sm bg-navy-800 px-3 py-2.5 text-sm leading-snug text-white shadow-[0_10px_28px_-10px_rgba(0,28,44,0.55)] motion-safe:animate-[rise_170ms_var(--ease-out-soft)]"
+              >
+                <Icono size={15} className={cx('mt-px shrink-0', color)} />
+                <span>{a.texto}</span>
+              </div>
+            )
+          })}
       </div>
+
+      {transicion && <TransicionPaso mensaje={transicion.mensaje} />}
     </div>
   )
 }

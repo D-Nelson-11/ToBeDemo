@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   LuCalendarDays,
   LuCircleCheck,
@@ -56,7 +57,8 @@ function calcular(ruta, modo, requerida, salidaFija) {
 }
 
 export default function ModalCrearDespacho({ oc, onClose }) {
-  const { agregarDespachos, avisar } = useOc()
+  const { agregarDespachos, avisar, transitar } = useOc()
+  const navegar = useNavigate()
 
   const [modo, setModo] = useState('requerida')
   const [fRequerida, setFRequerida] = useState('')
@@ -150,8 +152,10 @@ export default function ModalCrearDespacho({ oc, onClose }) {
         marcadas.length === 1 ? '' : 's'
       } para la OC ${oc.id} vía ${ruta.frontera}. Ya aparecen en Seguimiento.`,
       'ok',
+      { destacado: true },
     )
     onClose()
+    transitar('Programando los despachos…', () => navegar('/seguimiento'))
   }
 
   return (

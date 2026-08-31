@@ -9,7 +9,7 @@ import {
   LuTriangleAlert,
 } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
-import { Select } from '../components/ui/Field'
+import { Input, Select } from '../components/ui/Field'
 import ModalActualizarFechas from './ModalActualizarFechas'
 import { useOc } from '../data/store'
 import { CHECK_ADUANA, CHECK_LOGISTICA, INCOTERMS, RUTAS, requisitosAduana } from '../data/catalogos'
@@ -188,6 +188,7 @@ function Avance({ marcas = [], tono }) {
 
 export default function Seguimiento() {
   const { ordenes, marcarCheck, avisar } = useOc()
+  const [qOc, setQOc] = useState('')
   const [fIncoterm, setFIncoterm] = useState('')
   const [fAlerta, setFAlerta] = useState('')
   const [seleccion, setSeleccion] = useState(null)
@@ -200,10 +201,11 @@ export default function Seguimiento() {
     () =>
       todas.filter(
         (f) =>
+          f.oc.id.toLowerCase().includes(qOc.toLowerCase().trim()) &&
           (!fIncoterm || f.oc.incoterm === fIncoterm) &&
           (!fAlerta || f.alerta.texto.startsWith(fAlerta)),
       ),
-    [todas, fIncoterm, fAlerta],
+    [todas, qOc, fIncoterm, fAlerta],
   )
 
   // La fila seleccionada se resuelve por clave contra la lista viva, así el
@@ -261,6 +263,12 @@ export default function Seguimiento() {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
+            <Input
+              placeholder="Filtrar OC…"
+              value={qOc}
+              onChange={(e) => setQOc(e.target.value)}
+              className="w-[140px]"
+            />
             <Select
               placeholder="Todos los incoterms"
               options={INCOTERMS}

@@ -4,7 +4,7 @@ import { LuFileText, LuPackage, LuPlus, LuRotateCcw, LuSparkles, LuTags, LuTrash
 import Panel from '../components/ui/Panel'
 import Button, { cx } from '../components/ui/Button'
 import { Field, Input, Select, Textarea } from '../components/ui/Field'
-import { useOc } from '../data/store'
+import { siguienteIdOc, useOc } from '../data/store'
 import {
   CATEGORIAS_PORTAL,
   CATEGORIAS_SKU,
@@ -54,7 +54,7 @@ const filaVacia = () => ({
 })
 
 export default function OrdenCompra() {
-  const { crearOc, avisar } = useOc()
+  const { crearOc, avisar, transitar, ordenes } = useOc()
   const navegar = useNavigate()
 
   const [form, setForm] = useState({
@@ -92,7 +92,7 @@ export default function OrdenCompra() {
     setMateriales(MATERIALES_DEL_PDF.map((m) => ({ ...m, uid: uid() })))
     setForm((f) => ({
       ...f,
-      documento: f.documento || '5523833',
+      documento: f.documento || siguienteIdOc(ordenes),
       proveedor: f.proveedor || 'ALLIED POTATO, INC',
       incoterm: f.incoterm || 'FOB',
       condPago: f.condPago || 'Crédito 30 días',
@@ -101,13 +101,18 @@ export default function OrdenCompra() {
       categoriaSku: f.categoriaSku || 'Papa y tubérculos',
       embalaje: f.embalaje || 'Bin plástico',
     }))
-    avisar('OC leída del PDF: 3 materiales y 6 campos de cabecera precargados.', 'ok')
+    avisar('OC leída del PDF: 3 materiales y 6 campos de cabecera precargados.', 'ok', {
+      destacado: true,
+    })
   }
 
   function guardar() {
     if (!form.documento || !form.proveedor)
-      return avisar('Falta el N° de documento o el proveedor.', 'rojo')
-    if (!materiales.length) return avisar('La OC necesita al menos un material.', 'rojo')
+      return avisar('Falta el N° de documento o el proveedor.', 'rojo', { destacado: true })
+    if (ordenes.some((o) => String(o.id) === String(form.documento).trim()))
+      return avisar(`Ya existe una OC con el número ${form.documento}.`, 'rojo', { destacado: true })
+    if (!materiales.length)
+      return avisar('La OC necesita al menos un material.', 'rojo', { destacado: true })
 
     crearOc({
       id: form.documento,
@@ -138,8 +143,8 @@ export default function OrdenCompra() {
       })),
       despachos: [],
     })
-    avisar(`OC ${form.documento} creada. Ya aparece en Crear Despacho.`, 'ok')
-    navegar('/despachos')
+    avisar(`OC ${form.documento} creada. Ya aparece en Crear Despacho.`, 'ok', { destacado: true })
+    transitar('Creando la orden de compra…', () => navegar('/despachos'))
   }
 
   return (

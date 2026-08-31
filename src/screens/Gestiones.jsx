@@ -907,8 +907,9 @@ export default function Gestiones() {
               disabled={!listo}
               onClick={() =>
                 avisar(
-                  `OC ${fila.oc.id}: ${seleccionadas.length} despacho${seleccionadas.length === 1 ? '' : 's'} procesado${seleccionadas.length === 1 ? '' : 's'}.`,
+                  `Instrucción de embarque creada para la OC ${fila.oc.id} · despacho${seleccionadas.length === 1 ? '' : 's'} ${seleccionadas.map((d) => d.despacho.id).join(', ')}.`,
                   'ok',
+                  { destacado: true },
                 )
               }
             >

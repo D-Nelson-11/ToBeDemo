@@ -65,13 +65,13 @@ function FiltroCol({ valor, onChange }) {
       <input
         value={valor}
         onChange={(e) => onChange(e.target.value)}
-        className="h-[26px] w-full rounded-xs border border-line bg-white px-1.5 pr-5 text-sm text-ink transition-colors duration-100 focus:border-navy-600 focus:outline-none focus:ring-2 focus:ring-navy-600/20"
+        className="h-6.5 w-full rounded-xs border border-line bg-white px-1.5 pr-5 text-sm text-ink transition-colors duration-100 focus:border-navy-600 focus:outline-none focus:ring-2 focus:ring-navy-600/20"
       />
       {valor && (
         <button
           aria-label="Limpiar filtro"
           onClick={() => onChange('')}
-          className="absolute right-1 flex h-[14px] w-[14px] items-center justify-center rounded-full bg-line text-ink-2 hover:bg-line-strong hover:text-ink"
+          className="absolute right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-line text-ink-2 hover:bg-line-strong hover:text-ink"
         >
           <LuX size={9} />
         </button>
@@ -158,7 +158,7 @@ export default function Despachos() {
               {f.punto && (
                 <span
                   className={cx(
-                    'h-[5px] w-[5px] shrink-0 rounded-full',
+                    'h-1.25 w-1.25 shrink-0 rounded-full',
                     f.punto,
                     filtro === f.id && 'ring-2 ring-white/25',
                   )}
@@ -176,7 +176,7 @@ export default function Despachos() {
 
         <label
           className={cx(
-            'inline-flex h-[30px] cursor-pointer items-center gap-2 whitespace-nowrap rounded-md border py-0 pl-[9px] pr-[11px] text-sm transition duration-100',
+            'inline-flex h-7.5 cursor-pointer items-center gap-2 whitespace-nowrap rounded-md border py-0 pl-2.25 pr-2.75 text-sm transition duration-100',
             verInactivas
               ? 'border-navy-200 bg-navy-50 font-medium text-navy-800'
               : 'border-line bg-surface text-ink-2 hover:border-navy-400',
@@ -219,35 +219,35 @@ export default function Despachos() {
             <table className="tbl">
           <thead>
             <tr>
-              <th className="w-[46px]" title="Crear despacho">
+              <th className="w-11.5" title="Crear despacho">
                 Prog.
               </th>
-              <Th campo="id" className="w-[108px]">
+              <Th campo="id" className="w-27">
                 Orden compra
               </Th>
-              <Th campo="proveedor" className="min-w-[210px]">
+              <Th campo="proveedor" className="min-w-52.5">
                 Proveedor
               </Th>
-              <Th campo="incoterm" className="w-[92px]">
+              <Th campo="incoterm" className="w-23">
                 Incoterm
               </Th>
-              <th className="w-[128px]">Propuesta</th>
-              <Th campo="fechaDoc" className="w-[104px]">
+              <th className="w-32">Propuesta</th>
+              <Th campo="fechaDoc" className="w-26">
                 Fecha doc.
               </Th>
-              <Th campo="ultEmbarque" className="w-[112px]">
+              <Th campo="ultEmbarque" className="w-28">
                 Últ. embarque
               </Th>
-              <th className="w-[66px] text-right!" title="Días desde la fecha de documento">
+              <th className="w-16.5 text-right!" title="Días desde la fecha de documento">
                 Días
               </th>
-              <th className="w-[176px]">Situación</th>
-              <th className="w-[128px]">Despachado</th>
-              <Th campo="resp" className="w-[180px]">
+              <th className="w-44">Situación</th>
+              <th className="w-32">Despachado</th>
+              <Th campo="resp" className="w-45">
                 Resp. compra
               </Th>
-              <th className="w-[104px]">Estado</th>
-              <th className="w-[162px] text-right!">Acciones</th>
+              <th className="w-26">Estado</th>
+              <th className="w-40 text-right!">Acciones</th>
             </tr>
             <tr className="filtros">
               <th />
@@ -268,8 +268,8 @@ export default function Despachos() {
           <tbody>
             {filas.length === 0 && (
               <tr>
-                <td colSpan={13} className="h-[148px]! bg-surface text-center">
-                  <span className="inline-flex flex-col items-center gap-[7px]">
+                <td colSpan={13} className="h-37! bg-surface text-center">
+                  <span className="inline-flex flex-col items-center gap-1.75">
                     <LuSearchX size={26} strokeWidth={1.5} className="text-navy-200" />
                     <span className="text-base font-semibold text-ink-2">Ninguna OC coincide</span>
                     <span className="text-sm text-ink-3">
@@ -314,7 +314,7 @@ export default function Despachos() {
                             : 'Crear despacho'
                       }
                       className={cx(
-                        'inline-flex h-6 w-[26px] items-center justify-center rounded-xs border transition duration-100',
+                        'inline-flex h-6 w-6.5 items-center justify-center rounded-xs border transition duration-100',
                         'hover:not-disabled:border-navy-800 hover:not-disabled:bg-navy-800 hover:not-disabled:text-white',
                         'active:not-disabled:scale-90 disabled:cursor-not-allowed disabled:opacity-30',
                         oc.sugerencia
@@ -421,7 +421,7 @@ export default function Despachos() {
                       }}
                       title={cerrada ? 'Reabrir la OC' : 'Cerrar la OC (deja de admitir despachos)'}
                       className={cx(
-                        'inline-flex h-[22px] items-center gap-1.5 whitespace-nowrap rounded-full border py-0 pl-[7px] pr-[9px] text-xs font-semibold transition duration-100 hover:brightness-97 active:scale-95',
+                        'inline-flex h-5.5 items-center gap-1.5 whitespace-nowrap rounded-full border py-0 pl-1.75 pr-2.25 text-xs font-semibold transition duration-100 hover:brightness-97 active:scale-95',
                         sitAlerta
                           ? sitAlerta.chip
                           : cerrada

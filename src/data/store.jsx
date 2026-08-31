@@ -15,6 +15,11 @@ const normalizar = (d) => ({
 // no se reinicia por OC, así ningún código se repite en pantalla.
 export const PREFIJO_DESPACHO = 'DPE'
 
+// Próximo número de OC libre: uno más que el mayor existente, para que una OC
+// nueva del demo nunca choque con una que ya está.
+export const siguienteIdOc = (ordenes) =>
+  String(ordenes.reduce((max, oc) => Math.max(max, Number(oc.id) || 0), 0) + 1)
+
 const ultimoCorrelativo = (ordenes) =>
   ordenes.reduce(
     (max, oc) =>
@@ -101,6 +106,9 @@ export function OcProvider({ children }) {
   // Quién está viendo el portal: cambia el sidebar completo, por eso vive en el
   // store y no en el Shell — las pantallas de cliente también la van a leer.
   const [vista, setVista] = useState('especialista')
+  // Pantalla de carga entre pasos del Supply Hub: la navegación real la hace el
+  // callback, acá solo se cubre la transición con el overlay durante ~2 s.
+  const [transicion, setTransicion] = useState(null)
   // Hilos de correo por OC: arrancan vacíos y se llenan al enviar desde la
   // pantalla. `esperando` son las OC cuya respuesta todavía viene en camino.
   const [hilos, setHilos] = useState({})
@@ -115,10 +123,13 @@ export function OcProvider({ children }) {
   const envios = useRef({})
   const nextId = useRef(1)
 
-  const avisar = useCallback((texto, tono = 'ok') => {
+  // `destacado` marca los avisos que no pueden pasar desapercibidos —creación,
+  // error al crear, OCR—: van arriba al centro, duran más y se cierran a mano.
+  // El resto son avisos de paso, abajo a la derecha.
+  const avisar = useCallback((texto, tono = 'ok', { destacado = false } = {}) => {
     const id = nextId.current++
-    setAvisos((a) => [...a, { id, texto, tono }])
-    setTimeout(() => setAvisos((a) => a.filter((x) => x.id !== id)), 4200)
+    setAvisos((a) => [...a, { id, texto, tono, destacado }])
+    setTimeout(() => setAvisos((a) => a.filter((x) => x.id !== id)), destacado ? 10000 : 4200)
   }, [])
 
   // El proveedor contesta a los 3 s. El temporizador vive en el store y no en el
@@ -145,6 +156,14 @@ export function OcProvider({ children }) {
     },
     [avisar],
   )
+
+  const transitar = useCallback((mensaje, cb) => {
+    setTransicion({ mensaje })
+    setTimeout(() => {
+      cb?.()
+      setTransicion(null)
+    }, 2000)
+  }, [])
 
   const recolectarDocumento = useCallback((clave, instruccion) => {
     setRecolectas((r) => ({ ...r, [clave]: { instruccion, fecha: new Date() } }))
@@ -173,6 +192,8 @@ export function OcProvider({ children }) {
       avanzarFiniquito,
       vista,
       setVista,
+      transicion,
+      transitar,
       hilos,
       esperando,
       enviarCorreo,
@@ -192,6 +213,8 @@ export function OcProvider({ children }) {
       avisos,
       avisar,
       vista,
+      transicion,
+      transitar,
       hilos,
       esperando,
       enviarCorreo,
