@@ -54,7 +54,7 @@ const filaVacia = () => ({
 })
 
 export default function OrdenCompra() {
-  const { crearOc, avisar, transitar, ordenes } = useOc()
+  const { crearOc, avisar, cargar, ordenes } = useOc()
   const navegar = useNavigate()
 
   const [form, setForm] = useState({
@@ -144,7 +144,7 @@ export default function OrdenCompra() {
       despachos: [],
     })
     avisar(`OC ${form.documento} creada. Ya aparece en Crear Despacho.`, 'ok', { destacado: true })
-    transitar('Creando la orden de compra…', () => navegar('/despachos'))
+    cargar('Cargando…', () => navegar('/despachos'))
   }
 
   return (

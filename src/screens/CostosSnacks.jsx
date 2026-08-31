@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
-import { LuFileDown, LuPrinter, LuSearchX, LuTriangleAlert } from 'react-icons/lu'
+import { LuFileDown, LuFileText, LuPrinter, LuSearchX, LuTriangleAlert } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
-import { Select } from '../components/ui/Field'
+import Modal from '../components/ui/Modal'
+import { Select, Textarea } from '../components/ui/Field'
 import { BarrasH, LineasMulti } from '../components/ui/Graficos'
 import { Kpi } from '../components/ui/Valores'
+import { fmtFecha } from '../lib/fechas'
 import { useOc } from '../data/store'
 import { PERIODOS_COSTO, PRIORIDADES, SERIES_COSTO, TONO_PRIORIDAD } from '../data/costosSnacks'
 import {
@@ -50,6 +52,48 @@ function Chip({ prioridad }) {
   )
 }
 
+/**
+ * Un gráfico del tablero. En modo informe suma el check para incluirlo y, si se
+ * marca, el área de comentario que va a acompañarlo en el documento final.
+ */
+function GraficoPanel({ g, informe, sel, onToggle, onComentario }) {
+  const marcado = g.id in sel
+  return (
+    <section
+      className={cx(
+        'panel',
+        informe && (marcado ? 'ring-2 ring-navy-600' : 'ring-1 ring-transparent hover:ring-line-strong'),
+      )}
+    >
+      <div className="panel-head">
+        {informe && (
+          <input
+            type="checkbox"
+            className="chk shrink-0"
+            checked={marcado}
+            onChange={() => onToggle(g.id)}
+            aria-label={`Incluir ${g.titulo} en el informe`}
+          />
+        )}
+        <span className="panel-title">{g.titulo}</span>
+        {g.pie && <span className="min-w-0 flex-1 truncate text-sm text-ink-3">{g.pie}</span>}
+      </div>
+      <div className="p-4">{g.nodo}</div>
+      {informe && marcado && (
+        <div className="border-t border-line bg-surface-2 p-3">
+          <span className="lbl mb-1.5 block">Comentario para el informe</span>
+          <Textarea
+            rows={3}
+            value={sel[g.id] ?? ''}
+            onChange={(e) => onComentario(g.id, e.target.value)}
+            placeholder="Observación sobre este gráfico…"
+          />
+        </div>
+      )}
+    </section>
+  )
+}
+
 /** Cost Control Tower: dónde se está yendo el costo logístico y por qué. */
 export default function CostosSnacks() {
   const { avisar } = useOc()
@@ -69,6 +113,47 @@ export default function CostosSnacks() {
   const { lider, ranking } = porMateria(filas)
   const detalle = detalleCosto(filas)
 
+  // Modo informe: se marcan gráficos, se les escribe un comentario y se arma el
+  // documento. `sel` es id → comentario; que la clave exista = está incluido.
+  const [informe, setInforme] = useState(false)
+  const [sel, setSel] = useState({})
+  const [verInforme, setVerInforme] = useState(false)
+
+  const graficos = [
+    {
+      id: 'tendencia',
+      titulo: 'Comportamiento de costos',
+      pie: 'costo total contra la parte extraordinaria',
+      nodo: <LineasMulti datos={tendencia} series={SERIES_COSTO} fmt={dinero} />,
+    },
+    {
+      id: 'aduana',
+      titulo: 'Costo por aduana / puerto',
+      nodo: <BarrasH datos={aduanas} fmt={dinero} />,
+    },
+    {
+      id: 'categoria',
+      titulo: 'Categorías de costo',
+      pie: 'demora, estadías, chasis, WTD e inland',
+      nodo: <BarrasH datos={categorias} fmt={dinero} />,
+    },
+  ]
+  const elegidos = graficos.filter((g) => g.id in sel)
+
+  const toggleInforme = () => {
+    setInforme((v) => !v)
+    setSel({})
+  }
+  const toggleGrafico = (id) =>
+    setSel((s) => {
+      const n = { ...s }
+      if (id in n) delete n[id]
+      else n[id] = ''
+      return n
+    })
+  const setComentario = (id, v) => setSel((s) => ({ ...s, [id]: v }))
+  const rep = { informe, sel, onToggle: toggleGrafico, onComentario: setComentario }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start gap-3">
@@ -79,7 +164,16 @@ export default function CostosSnacks() {
             recalcula con los filtros.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <label
+            className={cx(
+              'flex cursor-pointer items-center gap-2 rounded-sm border px-3 py-1.5 text-sm font-medium transition-colors',
+              informe ? 'border-navy-600 bg-navy-50 text-navy-800' : 'border-line bg-surface text-ink-2',
+            )}
+          >
+            <input type="checkbox" className="chk" checked={informe} onChange={toggleInforme} />
+            Generar informe
+          </label>
           <Button size="sm" onClick={() => avisar('Exportación de costos generada (demo).')}>
             <LuFileDown size={14} /> Exportar
           </Button>
@@ -117,16 +211,10 @@ export default function CostosSnacks() {
       {/* La tendencia necesita ancho; las dos de barras son cortas y caben en un cuarto */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         <div className="xl:col-span-2">
-          <Panel titulo="Comportamiento de costos" pie="costo total contra la parte extraordinaria">
-            <LineasMulti datos={tendencia} series={SERIES_COSTO} fmt={dinero} />
-          </Panel>
+          <GraficoPanel g={graficos[0]} {...rep} />
         </div>
-        <Panel titulo="Costo por aduana / puerto">
-          <BarrasH datos={aduanas} fmt={dinero} />
-        </Panel>
-        <Panel titulo="Categorías de costo" pie="demora, estadías, chasis, WTD e inland">
-          <BarrasH datos={categorias} fmt={dinero} />
-        </Panel>
+        <GraficoPanel g={graficos[1]} {...rep} />
+        <GraficoPanel g={graficos[2]} {...rep} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
@@ -307,6 +395,79 @@ export default function CostosSnacks() {
           </table>
         </div>
       </div>
+
+      {informe && (
+        <div className="sticky bottom-4 z-10 flex flex-wrap items-center gap-3 rounded-sm border border-navy-100 bg-navy-50 px-4 py-3 shadow-[0_10px_28px_-14px_rgba(0,28,44,0.45)]">
+          <LuFileText size={16} className="shrink-0 text-navy-700" />
+          <span className="min-w-0 flex-1 text-sm text-ink-2">
+            {elegidos.length === 0
+              ? 'Marcá los gráficos que querés incluir y escribiles un comentario.'
+              : `${elegidos.length} gráfico${elegidos.length === 1 ? '' : 's'} seleccionado${
+                  elegidos.length === 1 ? '' : 's'
+                }.`}
+          </span>
+          <Button
+            size="sm"
+            variant="primary"
+            disabled={elegidos.length === 0}
+            onClick={() => setVerInforme(true)}
+          >
+            <LuFileText size={14} /> Generar informe
+          </Button>
+        </div>
+      )}
+
+      <Modal
+        open={verInforme}
+        onClose={() => setVerInforme(false)}
+        size="lg"
+        eyebrow="Performance Compass · Costos logísticos"
+        title="Informe de costos logísticos"
+        footer={
+          <>
+            <span className="min-w-0 flex-1 text-sm text-ink-2">
+              {elegidos.length} gráfico{elegidos.length === 1 ? '' : 's'} · {fmtFecha(new Date())}
+            </span>
+            <Button variant="quiet" onClick={() => setVerInforme(false)}>
+              Cerrar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                avisar(`Informe generado con ${elegidos.length} gráfico${
+                  elegidos.length === 1 ? '' : 's'
+                } (demo).`)
+                setVerInforme(false)
+              }}
+            >
+              <LuFileDown size={14} /> Descargar
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-5">
+          <div className="rounded-sm border border-line bg-surface-2 p-3 text-sm text-ink-2">
+            <b className="font-bold text-navy-800">Alcance:</b> materias primas para snacks · {f.periodo}
+            {' · '}
+            {k.embarques} embarques{sucio ? ' · con filtros aplicados' : ''}.
+          </div>
+          {elegidos.map((g, i) => (
+            <section key={g.id} className="border-b border-line pb-5 last:border-0 last:pb-0">
+              <div className="mb-1 text-xs font-bold text-ink-3">GRÁFICO {i + 1}</div>
+              <h3 className="m-0 mb-3 text-base font-bold text-navy-800">{g.titulo}</h3>
+              <div className="rounded-sm border border-line bg-surface p-4">{g.nodo}</div>
+              <div className="mt-3">
+                <span className="lbl mb-1 block">Comentario</span>
+                {sel[g.id]?.trim() ? (
+                  <p className="m-0 whitespace-pre-wrap text-sm text-ink-2">{sel[g.id]}</p>
+                ) : (
+                  <p className="m-0 text-sm text-ink-4">Sin comentario.</p>
+                )}
+              </div>
+            </section>
+          ))}
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -9,6 +9,7 @@ import {
   LuCircleAlert,
   LuCircleCheck,
   LuGauge,
+  LuLoaderCircle,
   LuLogOut,
   LuPackageCheck,
   LuPanelLeftClose,
@@ -213,12 +214,18 @@ function Cargando() {
   )
 }
 
-/** Cubre la pantalla mientras se pasa de un paso del Supply Hub al siguiente. */
-function TransicionPaso({ mensaje }) {
+/** Toast de carga: arriba al centro, sin tapar la pantalla. */
+function ToastCarga({ mensaje }) {
   return (
-    <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center gap-4 bg-navy-800 text-white motion-safe:animate-[fade_200ms_var(--ease-out-soft)]">
-      <span className="h-8 w-8 animate-spin rounded-full border-[3px] border-white/25 border-t-white" />
-      <span className="text-base font-medium">{mensaje}</span>
+    <div
+      role="status"
+      aria-live="polite"
+      className="fixed left-1/2 top-4 z-[280] -translate-x-1/2 motion-safe:animate-[rise_170ms_var(--ease-out-soft)]"
+    >
+      <span className="flex items-center gap-2.5 rounded-full bg-navy-800 px-4 py-2 text-sm font-medium text-white shadow-[0_16px_40px_-12px_rgba(0,28,44,0.6)]">
+        <LuLoaderCircle size={15} className="motion-safe:animate-spin" />
+        {mensaje}
+      </span>
     </div>
   )
 }
@@ -239,7 +246,7 @@ function SinModulos({ vista }) {
 export default function Shell() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const { avisos, descartarAviso, vista, setVista, transicion } = useOc()
+  const { avisos, descartarAviso, vista, setVista, cargando } = useOc()
   const [plegado, setPlegado] = useState(false)
   // Solo guarda lo que el usuario plegó o desplegó a mano; el resto sigue la ruta.
   const [desplegado, setDesplegado] = useState({})
@@ -535,7 +542,7 @@ export default function Shell() {
           })}
       </div>
 
-      {transicion && <TransicionPaso mensaje={transicion.mensaje} />}
+      {cargando && <ToastCarga mensaje={cargando} />}
     </div>
   )
 }

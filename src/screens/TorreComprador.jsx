@@ -4,15 +4,17 @@ import {
   LuCalendarRange,
   LuCircleCheck,
   LuClipboardList,
+  LuEllipsis,
   LuLayoutDashboard,
   LuMapPinned,
-  LuSearch,
   LuShip,
   LuStamp,
   LuTriangleAlert,
   LuWarehouse,
 } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
+import ModalEmbarque from '../components/ModalEmbarque'
+import { Select } from '../components/ui/Field'
 import { Kpi } from '../components/ui/Valores'
 import { useOc } from '../data/store'
 import { construirComprador } from '../lib/comprador'
@@ -102,34 +104,77 @@ function Tabla({ columnas, filas, vacio, children }) {
 export default function TorreComprador() {
   const { ordenes, avisar } = useOc()
   const [vista, setVista] = useState('resumen')
-  const [q, setQ] = useState('')
+  const [proveedor, setProveedor] = useState('')
+  const [sku, setSku] = useState('')
+  // Embarque cuyo detalle se está viendo: { embarque, tipo: 'transito' | 'aduana' }.
+  const [detalle, setDetalle] = useState(null)
 
   // Ya no llega por prop del portal: la pantalla es su propia ruta.
   const embarques = useMemo(() => construirEmbarques(ordenes), [ordenes])
   const d = useMemo(() => construirComprador(ordenes, embarques), [ordenes, embarques])
   const alertas = useMemo(() => construirAlertas(embarques), [embarques])
 
-  const cuenta = {
-    resumen: null,
-    sinProgramacion: d.sinProgramacion.length,
-    programacion: d.programacion.length,
-    transito: d.transito.length,
-    aduana: d.aduana.length,
-    planta: d.planta.length,
-    entregados: d.entregados.length,
-    alertas: alertas.length + d.sinProgramacion.length,
-    sitios: d.sitios.length,
+  // Opciones de los dos filtros de cabecera, sacadas de las OC activas.
+  const proveedores = useMemo(
+    () => [...new Set(ordenes.filter((o) => o.activa).map((o) => o.proveedor))].sort(),
+    [ordenes],
+  )
+  const skus = useMemo(
+    () =>
+      [
+        ...new Set(ordenes.filter((o) => o.activa).flatMap((o) => o.materiales.map((m) => m.nombre))),
+      ].sort(),
+    [ordenes],
+  )
+
+  // Dos filtros de cabecera para todas las vistas: proveedor y SKU. La OC y el
+  // SKU de cada fila viven en campos distintos según la vista (en entregados el
+  // SKU es la lista de materiales de la OC).
+  const filtrar = (filas) =>
+    filas.filter((f) => {
+      const prov = f.oc?.proveedor ?? f.embarque?.oc?.proveedor
+      const okProv = !proveedor || prov === proveedor
+      const okSku =
+        !sku ||
+        f.sku === sku ||
+        f.embarque?.material?.nombre === sku ||
+        (f.oc ?? f.embarque?.oc)?.materiales?.some((m) => m.nombre === sku)
+      return okProv && okSku
+    })
+
+  // Todo lo de la pantalla —cards, barras, tablas y contadores— sale de estas
+  // listas ya filtradas, así los números cambian junto con los selects.
+  const rows = {
+    sinProgramacion: filtrar(d.sinProgramacion),
+    programacion: filtrar(d.programacion),
+    transito: filtrar(d.transito),
+    aduana: filtrar(d.aduana),
+    planta: filtrar(d.planta),
+    entregados: filtrar(d.entregados),
+    alertas: filtrar(alertas),
   }
 
-  // Un solo buscador para todas las vistas: cae sobre OC, embarque, sitio y SKU.
-  const filtrar = (filas) => {
-    const t = q.toLowerCase().trim()
-    if (!t) return filas
-    return filas.filter((f) =>
-      `${f.oc?.id ?? ''} ${f.oc?.proveedor ?? ''} ${f.embarque?.id ?? ''} ${f.sitio ?? f.centro ?? ''} ${f.sku ?? ''}`
-        .toLowerCase()
-        .includes(t),
-    )
+  const suma = (filas, valor) => filas.reduce((a, x) => a + valor(x), 0)
+  const cantEmbarque = (x) => x.embarque.despacho.cantidad
+  const totales = {
+    sinProgramacion: suma(rows.sinProgramacion, (x) => x.cantidad),
+    programacion: suma(rows.programacion, cantEmbarque),
+    transito: suma(rows.transito, cantEmbarque),
+    aduana: suma(rows.aduana, cantEmbarque),
+    planta: suma(rows.planta, cantEmbarque),
+    entregados: suma(rows.entregados, (x) => x.cantidad),
+  }
+
+  const cuenta = {
+    resumen: null,
+    sinProgramacion: rows.sinProgramacion.length,
+    programacion: rows.programacion.length,
+    transito: rows.transito.length,
+    aduana: rows.aduana.length,
+    planta: rows.planta.length,
+    entregados: rows.entregados.length,
+    alertas: rows.alertas.length + rows.sinProgramacion.length,
+    sitios: d.sitios.length,
   }
 
   return (
@@ -142,13 +187,20 @@ export default function TorreComprador() {
             Abastecimiento, vistas desde el pedido.
           </p>
         </div>
-        <div className="relative flex items-center">
-          <LuSearch size={13} className="pointer-events-none absolute left-2.5 text-ink-4" />
-          <input
-            className="inp w-[250px] pl-7"
-            placeholder="Buscar OC, embarque, sitio…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            placeholder="Todos los proveedores"
+            options={proveedores}
+            value={proveedor}
+            onChange={(e) => setProveedor(e.target.value)}
+            className="w-[220px]"
+          />
+          <Select
+            placeholder="Todos los SKU"
+            options={skus}
+            value={sku}
+            onChange={(e) => setSku(e.target.value)}
+            className="w-[220px]"
           />
         </div>
       </div>
@@ -170,12 +222,12 @@ export default function TorreComprador() {
       {vista === 'resumen' && (
         <>
           <div className="flex flex-wrap gap-2">
-            <Kpi rotulo="Sin programación" valor={fmtNum(d.totales.sinProgramacion)} tono="border-rojo-100 bg-rojo-50" />
-            <Kpi rotulo="Programado" valor={fmtNum(d.totales.programacion)} tono="border-ambar-100 bg-ambar-50" />
-            <Kpi rotulo="En tránsito" valor={fmtNum(d.totales.transito)} />
-            <Kpi rotulo="En aduana" valor={fmtNum(d.totales.aduana)} />
-            <Kpi rotulo="En planta" valor={fmtNum(d.totales.planta)} />
-            <Kpi rotulo="Entregado" valor={fmtNum(d.totales.entregados)} tono="border-teal-100 bg-teal-50" />
+            <Kpi rotulo="Sin programación" valor={fmtNum(totales.sinProgramacion)} tono="border-rojo-100 bg-rojo-50" />
+            <Kpi rotulo="Programado" valor={fmtNum(totales.programacion)} tono="border-ambar-100 bg-ambar-50" />
+            <Kpi rotulo="En tránsito" valor={fmtNum(totales.transito)} />
+            <Kpi rotulo="En aduana" valor={fmtNum(totales.aduana)} />
+            <Kpi rotulo="En planta" valor={fmtNum(totales.planta)} />
+            <Kpi rotulo="Entregado" valor={fmtNum(totales.entregados)} tono="border-teal-100 bg-teal-50" />
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -186,14 +238,14 @@ export default function TorreComprador() {
               </div>
               <div className="flex flex-col gap-2.5 p-4">
                 {[
-                  ['Sin programación', d.totales.sinProgramacion, 'bg-rojo-600'],
-                  ['Programado', d.totales.programacion, 'bg-ambar-500'],
-                  ['En tránsito', d.totales.transito, 'bg-navy-600'],
-                  ['En aduana', d.totales.aduana, 'bg-navy-400'],
-                  ['En planta', d.totales.planta, 'bg-teal-600'],
-                  ['Entregado', d.totales.entregados, 'bg-teal-700'],
+                  ['Sin programación', totales.sinProgramacion, 'bg-rojo-600'],
+                  ['Programado', totales.programacion, 'bg-ambar-500'],
+                  ['En tránsito', totales.transito, 'bg-navy-600'],
+                  ['En aduana', totales.aduana, 'bg-navy-400'],
+                  ['En planta', totales.planta, 'bg-teal-600'],
+                  ['Entregado', totales.entregados, 'bg-teal-700'],
                 ].map(([rotulo, valor, tono]) => {
-                  const max = Math.max(...Object.values(d.totales), 1)
+                  const max = Math.max(...Object.values(totales), 1)
                   return (
                     <div key={rotulo}>
                       <div className="flex items-baseline justify-between gap-3 text-sm">
@@ -214,10 +266,10 @@ export default function TorreComprador() {
                 <span className="panel-title">Alertas prioritarias</span>
               </div>
               <div className="flex flex-col gap-2 p-4">
-                {d.sinProgramacion.length === 0 && alertas.length === 0 && (
+                {rows.sinProgramacion.length === 0 && rows.alertas.length === 0 && (
                   <p className="text-sm text-ink-3">Ningún pedido requiere gestión en este momento.</p>
                 )}
-                {d.sinProgramacion.slice(0, 3).map((f) => (
+                {rows.sinProgramacion.slice(0, 3).map((f) => (
                   <div key={f.clave} className="rounded-sm border border-rojo-100 bg-rojo-50 px-3 py-2 text-sm text-rojo-700">
                     <b className="font-bold">OC {f.oc.id} — {f.motivo}</b>
                     <span className="block">
@@ -225,7 +277,7 @@ export default function TorreComprador() {
                     </span>
                   </div>
                 ))}
-                {alertas.slice(0, 3).map((a) => (
+                {rows.alertas.slice(0, 3).map((a) => (
                   <div key={a.clave} className={cx('rounded-sm border px-3 py-2 text-sm', TONO_NIVEL[NIVELES[a.nivel].tono])}>
                     <b className="font-bold">{a.embarque.id}</b>
                     <span className="block">{a.texto}</span>
@@ -246,7 +298,7 @@ export default function TorreComprador() {
               ['ETA', 'w-[110px]'],
               ['Alerta', 'w-[170px]'],
             ]}
-            filas={filtrar(d.programacion)}
+            filas={rows.programacion}
             vacio="Ningún pedido con ese criterio."
           >
             {(f) => (
@@ -286,7 +338,7 @@ export default function TorreComprador() {
             ['Impacto', 'w-[90px]'],
             ['Acción', 'w-[190px]'],
           ]}
-          filas={filtrar(d.sinProgramacion)}
+          filas={rows.sinProgramacion}
           vacio="Todos los pedidos tienen fecha del proveedor."
         >
           {(f) => (
@@ -333,7 +385,7 @@ export default function TorreComprador() {
             ['Sitio', 'w-[180px]'],
             ['Estado', 'w-[130px]'],
           ]}
-          filas={filtrar(d.programacion)}
+          filas={rows.programacion}
           vacio="Ningún despacho programado."
         >
           {(f) => (
@@ -371,8 +423,9 @@ export default function TorreComprador() {
             ['ETA planta', 'w-[120px]'],
             ['Avance', 'w-[140px]'],
             ['Riesgo', 'w-[130px]'],
+            ['', 'w-[52px]'],
           ]}
-          filas={filtrar(d.transito)}
+          filas={rows.transito}
           vacio="Ningún embarque en tránsito."
         >
           {(f) => (
@@ -393,6 +446,17 @@ export default function TorreComprador() {
               <td>
                 <Chip tono={TONO_RIESGO[f.riesgo]}>{f.riesgo}</Chip>
               </td>
+              <td>
+                <div className="flex justify-end">
+                  <button
+                    className="ico"
+                    title="Ver detalle del embarque"
+                    onClick={() => setDetalle({ embarque: f.embarque, tipo: 'transito' })}
+                  >
+                    <LuEllipsis size={15} />
+                  </button>
+                </div>
+              </td>
             </tr>
           )}
         </Tabla>
@@ -410,8 +474,9 @@ export default function TorreComprador() {
             ['ETA planta', 'w-[120px]'],
             ['SLA', 'w-[120px]'],
             ['Riesgo', 'w-[130px]'],
+            ['', 'w-[52px]'],
           ]}
-          filas={filtrar(d.aduana)}
+          filas={rows.aduana}
           vacio="Ningún embarque en aduana de destino."
         >
           {(f) => (
@@ -444,6 +509,17 @@ export default function TorreComprador() {
               <td>
                 <Chip tono={TONO_RIESGO[f.riesgo]}>{f.riesgo}</Chip>
               </td>
+              <td>
+                <div className="flex justify-end">
+                  <button
+                    className="ico"
+                    title="Ver bitácora del trámite aduanero"
+                    onClick={() => setDetalle({ embarque: f.embarque, tipo: 'aduana' })}
+                  >
+                    <LuEllipsis size={15} />
+                  </button>
+                </div>
+              </td>
             </tr>
           )}
         </Tabla>
@@ -461,7 +537,7 @@ export default function TorreComprador() {
             ['Recepción', 'w-[150px]'],
             ['Riesgo', 'w-[130px]'],
           ]}
-          filas={filtrar(d.planta)}
+          filas={rows.planta}
           vacio="Ningún embarque en planta."
         >
           {(f) => (
@@ -496,7 +572,7 @@ export default function TorreComprador() {
             ['Cantidad', 'w-[140px] text-right!'],
             ['Cumplimiento', 'w-[160px]'],
           ]}
-          filas={filtrar(d.entregados)}
+          filas={rows.entregados}
           vacio="Ningún pedido entregado por completo todavía."
         >
           {(f) => (
@@ -537,10 +613,10 @@ export default function TorreComprador() {
             </Button>
           </div>
           <div className="flex flex-col gap-2 p-4">
-            {d.sinProgramacion.length === 0 && alertas.length === 0 && (
+            {rows.sinProgramacion.length === 0 && rows.alertas.length === 0 && (
               <p className="text-sm text-ink-3">Sin alertas activas.</p>
             )}
-            {d.sinProgramacion.map((f) => (
+            {rows.sinProgramacion.map((f) => (
               <div
                 key={f.clave}
                 className="flex flex-wrap items-start gap-2.5 rounded-sm border border-rojo-100 bg-rojo-50 px-3 py-2.5 text-sm text-rojo-700"
@@ -554,7 +630,7 @@ export default function TorreComprador() {
                 </span>
               </div>
             ))}
-            {alertas.map((a) => (
+            {rows.alertas.map((a) => (
               <div
                 key={a.clave}
                 className={cx(
@@ -603,6 +679,12 @@ export default function TorreComprador() {
           ))}
         </div>
       )}
+
+      <ModalEmbarque
+        embarque={detalle?.embarque}
+        tipo={detalle?.tipo}
+        onClose={() => setDetalle(null)}
+      />
     </div>
   )
 }

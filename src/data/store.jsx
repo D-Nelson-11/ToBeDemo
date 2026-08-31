@@ -106,9 +106,9 @@ export function OcProvider({ children }) {
   // Quién está viendo el portal: cambia el sidebar completo, por eso vive en el
   // store y no en el Shell — las pantallas de cliente también la van a leer.
   const [vista, setVista] = useState('especialista')
-  // Pantalla de carga entre pasos del Supply Hub: la navegación real la hace el
-  // callback, acá solo se cubre la transición con el overlay durante ~2 s.
-  const [transicion, setTransicion] = useState(null)
+  // Carga entre pasos del Supply Hub: un toast arriba al centro mientras se
+  // resuelve el paso (la navegación real la hace el callback). Solo el texto.
+  const [cargando, setCargando] = useState(null)
   // Hilos de correo por OC: arrancan vacíos y se llenan al enviar desde la
   // pantalla. `esperando` son las OC cuya respuesta todavía viene en camino.
   const [hilos, setHilos] = useState({})
@@ -157,12 +157,12 @@ export function OcProvider({ children }) {
     [avisar],
   )
 
-  const transitar = useCallback((mensaje, cb) => {
-    setTransicion({ mensaje })
+  const cargar = useCallback((mensaje, cb) => {
+    setCargando(mensaje)
     setTimeout(() => {
       cb?.()
-      setTransicion(null)
-    }, 2000)
+      setCargando(null)
+    }, 1300)
   }, [])
 
   const recolectarDocumento = useCallback((clave, instruccion) => {
@@ -192,8 +192,8 @@ export function OcProvider({ children }) {
       avanzarFiniquito,
       vista,
       setVista,
-      transicion,
-      transitar,
+      cargando,
+      cargar,
       hilos,
       esperando,
       enviarCorreo,
@@ -213,8 +213,8 @@ export function OcProvider({ children }) {
       avisos,
       avisar,
       vista,
-      transicion,
-      transitar,
+      cargando,
+      cargar,
       hilos,
       esperando,
       enviarCorreo,

@@ -7,6 +7,7 @@ import {
   LuEllipsis,
   LuFileCheck,
   LuHandshake,
+  LuMail,
   LuMapPin,
   LuSearch,
   LuShip,
@@ -21,6 +22,7 @@ import BitacoraAduana from '../components/BitacoraAduana'
 import CostosLogisticos from './CostosLogisticos'
 import LiberacionDocumentos from './LiberacionDocumentos'
 import MerchantCarrier from './MerchantCarrier'
+import ModalColaCorreo from './ModalColaCorreo'
 import DetalleTransito from '../components/DetalleTransito'
 import RielAduana from '../components/RielAduana'
 import RielTransito from '../components/RielTransito'
@@ -116,6 +118,8 @@ export default function Torre() {
   const [q, setQ] = useState('')
   const [nivelFiltro, setNivelFiltro] = useState('')
   const [detalle, setDetalle] = useState(null)
+  // Embarque cuya cola de correo (correo de asignación a la agencia) se está viendo.
+  const [cola, setCola] = useState(null)
   const enTramite = detalle?.segmento === 'Customs Clearance'
   const enTransito = detalle?.segmento === 'International Transit'
 
@@ -269,7 +273,7 @@ export default function Torre() {
                       <th className="w-[100px] text-right!">Desviación</th>
                       <th className="w-[120px]">Actualizado</th>
                       <th className="w-[140px]">Riesgo</th>
-                      <th className="w-[52px]" />
+                      <th className="w-[86px]" />
                     </tr>
                   </thead>
                   <tbody>
@@ -320,7 +324,14 @@ export default function Torre() {
                             </span>
                           </td>
                           <td>
-                            <div className="flex justify-end">
+                            <div className="flex justify-end gap-1">
+                              <button
+                                className="ico"
+                                title="Cola de correo · trámite asignado a la agencia aduanal"
+                                onClick={() => setCola(e)}
+                              >
+                                <LuMail size={15} />
+                              </button>
                               <button
                                 className="ico"
                                 title="Ver detalle del embarque"
@@ -606,6 +617,8 @@ export default function Torre() {
           </div>
         )}
       </Modal>
+
+      <ModalColaCorreo embarque={cola} onClose={() => setCola(null)} />
     </div>
   )
 }

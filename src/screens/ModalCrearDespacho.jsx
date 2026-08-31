@@ -57,7 +57,7 @@ function calcular(ruta, modo, requerida, salidaFija) {
 }
 
 export default function ModalCrearDespacho({ oc, onClose }) {
-  const { agregarDespachos, avisar, transitar } = useOc()
+  const { agregarDespachos, avisar, cargar } = useOc()
   const navegar = useNavigate()
 
   const [modo, setModo] = useState('requerida')
@@ -155,7 +155,7 @@ export default function ModalCrearDespacho({ oc, onClose }) {
       { destacado: true },
     )
     onClose()
-    transitar('Programando los despachos…', () => navegar('/seguimiento'))
+    cargar('Cargando…', () => navegar('/seguimiento'))
   }
 
   return (
