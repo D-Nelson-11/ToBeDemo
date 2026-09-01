@@ -16,9 +16,9 @@ const Gestiones = lazy(() => import('./screens/Gestiones'))
 const Torre = lazy(() => import('./screens/Torre'))
 const PlanningImportaciones = lazy(() => import('./screens/PlanningImportaciones'))
 const TorreComprador = lazy(() => import('./screens/TorreComprador'))
+const TorreLogistica = lazy(() => import('./screens/TorreLogistica'))
 const CostosLogisticos = lazy(() => import('./screens/CostosLogisticos'))
 const MerchantCarrier = lazy(() => import('./screens/MerchantCarrier'))
-const Pendiente = lazy(() => import('./screens/Pendiente'))
 const Kpi = lazy(() => import('./screens/Kpi'))
 
 createRoot(document.getElementById('root')).render(
@@ -39,15 +39,7 @@ createRoot(document.getElementById('root')).render(
               <Route path="torre" element={<TorreComprador />} />
               {/* Logística: el único módulo con submenú */}
               <Route path="logistica" element={<Navigate to="/cliente/logistica/transito" replace />} />
-              <Route
-                path="logistica/transito"
-                element={
-                  <Pendiente
-                    titulo="Embarques en tránsito"
-                    detalle="Pantalla pendiente: acá va el seguimiento de los embarques que todavía no llegan a aduana."
-                  />
-                }
-              />
+              <Route path="logistica/transito" element={<TorreLogistica />} />
               <Route path="logistica/costos" element={<CostosLogisticos />} />
               <Route path="logistica/merchant" element={<MerchantCarrier />} />
               {/* Entregable muestra los mismos indicadores que Performance Compass */}

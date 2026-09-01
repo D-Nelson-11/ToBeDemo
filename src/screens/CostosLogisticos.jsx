@@ -33,14 +33,22 @@ const TONO_PUNTO = {
 
 // El rótulo que se ve y se lee en el aviso; la clave es la que traen los datos.
 const ACCION = {
-  Detalle: { rotulo: 'Detalle', tono: 'text-ink-2' },
-  Validar: { rotulo: 'Validar', tono: 'text-teal-700' },
-  Aprobar: { rotulo: 'Solicitar aprobación', tono: 'text-navy-700' },
+  Aprobar: { rotulo: 'Aprobar', tono: 'text-teal-700' },
+  Rechazar: { rotulo: 'Rechazar', tono: 'text-rojo-700' },
   Escalar: { rotulo: 'Escalar', tono: 'text-rojo-700' },
   Revisar: { rotulo: 'Revisar', tono: 'text-navy-700' },
   Seguimiento: { rotulo: 'Seguimiento', tono: 'text-ink-2' },
   Intervenir: { rotulo: 'Intervenir', tono: 'text-ambar-700' },
   'Ver / actuar': { rotulo: 'Ver / actuar', tono: 'text-navy-700' },
+}
+
+// Los botones de fila de esta pantalla son Aprobar / Rechazar: "Detalle" y
+// "Validar" del mockup se reemplazan por esos dos, sin duplicar "Aprobar".
+function accionesFila(acciones) {
+  const limpias = acciones.map((a) => a.trim())
+  if (!limpias.some((a) => a === 'Detalle' || a === 'Validar')) return acciones
+  const resto = limpias.filter((a) => !['Detalle', 'Validar', 'Aprobar'].includes(a))
+  return ['Aprobar', 'Rechazar', ...resto]
 }
 
 // Las seis acciones masivas del Resumen; en la demo cada una deja su aviso.
@@ -127,7 +135,7 @@ function Celda({ celda, onAccion }) {
     return (
       // Nunca se apilan: la fila mide 36px y la columna cede antes que el botón.
       <div className="flex flex-nowrap items-center gap-1.5">
-        {celda.acciones.map((a) => {
+        {accionesFila(celda.acciones).map((a) => {
           // El dato del mockup trae espacios sueltos: sin trim no matchea el mapa.
           const clave = a.trim()
           const { rotulo = clave, tono = 'text-ink-2' } = ACCION[clave] ?? {}
