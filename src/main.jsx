@@ -42,8 +42,8 @@ createRoot(document.getElementById('root')).render(
               <Route path="logistica/transito" element={<TorreLogistica />} />
               <Route path="logistica/costos" element={<CostosLogisticos />} />
               <Route path="logistica/merchant" element={<MerchantCarrier />} />
-              {/* Entregable muestra los mismos indicadores que Performance Compass */}
-              <Route path="entregable" element={<Kpi />} />
+              {/* Entregable: Performance Compass + la torre de precios y gastos */}
+              <Route path="entregable" element={<Kpi cliente />} />
             </Route>
             <Route path="/kpi" element={<Contenedor />}>
               <Route index element={<Kpi />} />
