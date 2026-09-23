@@ -8,6 +8,7 @@ import {
   LuChevronDown,
   LuCircleAlert,
   LuCircleCheck,
+  LuFileDiff,
   LuGauge,
   LuLoaderCircle,
   LuLogOut,
@@ -55,6 +56,14 @@ export const MODULOS = [
     icono: LuChartColumn,
     to: '/kpi',
     rutas: ['/kpi'],
+  },
+  {
+    id: 'compare',
+    titulo: 'Compare',
+    sub: 'Comparar archivos',
+    icono: LuFileDiff,
+    to: '/compare',
+    rutas: ['/compare'],
   },
 ]
 

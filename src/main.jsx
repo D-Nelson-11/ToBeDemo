@@ -20,6 +20,7 @@ const TorreLogistica = lazy(() => import('./screens/TorreLogistica'))
 const CostosLogisticos = lazy(() => import('./screens/CostosLogisticos'))
 const MerchantCarrier = lazy(() => import('./screens/MerchantCarrier'))
 const Kpi = lazy(() => import('./screens/Kpi'))
+const Compare = lazy(() => import('./screens/Compare'))
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -47,6 +48,9 @@ createRoot(document.getElementById('root')).render(
             </Route>
             <Route path="/kpi" element={<Contenedor />}>
               <Route index element={<Kpi />} />
+            </Route>
+            <Route path="/compare" element={<Contenedor />}>
+              <Route index element={<Compare />} />
             </Route>
             <Route path="*" element={<Navigate to="/orden-compra" replace />} />
           </Route>
