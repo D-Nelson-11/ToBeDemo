@@ -13,6 +13,7 @@ import {
   LuSearchX,
 } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
+import PanelPlegable from '../components/ui/PanelPlegable'
 import { Select } from '../components/ui/Field'
 import { BarrasH, BarrasV, Lineas, Reparto } from '../components/ui/Graficos'
 import { Kpi } from '../components/ui/Valores'
@@ -77,11 +78,10 @@ function Panel({ titulo, pie, children }) {
 
 function Tabla({ titulo, columnas, filas, children }) {
   return (
-    <div className="panel">
-      <div className="panel-head">
-        <span className="panel-title">{titulo}</span>
-        <span className="num ml-auto text-sm text-ink-3">{filas.length} filas</span>
-      </div>
+    <PanelPlegable
+      titulo={titulo}
+      extra={<span className="num text-sm text-ink-3">{filas.length} filas</span>}
+    >
       <div className="tabla-scroll">
         <table className="tbl">
           <thead>
@@ -105,7 +105,7 @@ function Tabla({ titulo, columnas, filas, children }) {
           </tbody>
         </table>
       </div>
-    </div>
+    </PanelPlegable>
   )
 }
 
@@ -209,11 +209,11 @@ export default function KpiVolumenes() {
       {vista === 'general' && (
         <>
           <div className="flex flex-wrap gap-2">
-            <Kpi rotulo="Embarques entregados" valor={n0(r.embarques)} tono="border-navy-100 bg-navy-50" />
+            <Kpi rotulo="Embarques entregados" valor={n0(r.embarques)} />
             <Kpi rotulo={rotuloMedida} valor={medidaActiva === 'kg' ? n1(r.kg) : n0(r.unidades)} />
             <Kpi rotulo="Contenedores" valor={n0(r.contenedores)} />
             <Kpi rotulo="Plantas atendidas" valor={`${r.plantas} / ${PLANTAS_KPI.length}`} />
-            <Kpi rotulo="SKU con movimiento" valor={`${r.skus} / ${SKUS_KPI.length}`} tono="border-teal-100 bg-teal-50" />
+            <Kpi rotulo="SKU con movimiento" valor={`${r.skus} / ${SKUS_KPI.length}`} />
           </div>
 
           <Panel titulo="Embarques entregados por mes" pie="pasá el cursor por los puntos">
@@ -458,12 +458,12 @@ export default function KpiVolumenes() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Kpi rotulo="Embarques" valor={n0(ri.embarques)} tono="border-navy-100 bg-navy-50" />
+            <Kpi rotulo="Embarques" valor={n0(ri.embarques)} />
             <Kpi rotulo="Unidades" valor={n0(ri.unidades)} />
             <Kpi rotulo="Kg" valor={n1(ri.kg)} />
             <Kpi rotulo="Contenedores" valor={n0(ri.contenedores)} />
             <Kpi rotulo="Plantas" valor={ri.plantas} />
-            <Kpi rotulo="Proveedores" valor={ri.proveedores} tono="border-teal-100 bg-teal-50" />
+            <Kpi rotulo="Proveedores" valor={ri.proveedores} />
           </div>
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">

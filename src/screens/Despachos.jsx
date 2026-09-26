@@ -22,6 +22,7 @@ import {
   LuX,
 } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
+import PanelPlegable from '../components/ui/PanelPlegable'
 import ModalCorreoProveedor from './ModalCorreoProveedor'
 import ModalCrearDespacho from './ModalCrearDespacho'
 import ModalEditarOc from './ModalEditarOc'
@@ -160,13 +161,12 @@ export default function Despachos() {
                   className={cx(
                     'h-1.25 w-1.25 shrink-0 rounded-full',
                     f.punto,
-                    filtro === f.id && 'ring-2 ring-white/25',
                   )}
                 />
               )}
               {f.rotulo}
               <span
-                className={cx('num text-xs', filtro === f.id ? 'text-white/75' : 'text-ink-4')}
+                className={cx('num text-xs', filtro === f.id ? 'text-navy-400' : 'text-ink-4')}
               >
                 {conteos[f.id]}
               </span>
@@ -215,305 +215,307 @@ export default function Despachos() {
       {/* La tabla vive en una caja blanca sobre el gris, como en el portal actual */}
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="contenedor py-5">
-          <div className="panel tabla-scroll">
-            <table className="tbl">
-          <thead>
-            <tr>
-              <th className="w-11.5" title="Crear despacho">
-                Prog.
-              </th>
-              <Th campo="id" className="w-27">
-                Orden compra
-              </Th>
-              <Th campo="proveedor" className="min-w-52.5">
-                Proveedor
-              </Th>
-              <Th campo="incoterm" className="w-23">
-                Incoterm
-              </Th>
-              <th className="w-32">Propuesta</th>
-              <Th campo="fechaDoc" className="w-26">
-                Fecha doc.
-              </Th>
-              <Th campo="ultEmbarque" className="w-28">
-                Últ. embarque
-              </Th>
-              <th className="w-16.5 text-right!" title="Días desde la fecha de documento">
-                Días
-              </th>
-              <th className="w-44">Situación</th>
-              <th className="w-32">Despachado</th>
-              <Th campo="resp" className="w-45">
-                Resp. compra
-              </Th>
-              <th className="w-26">Estado</th>
-              <th className="w-40 text-right!">Acciones</th>
-            </tr>
-            <tr className="filtros">
-              <th />
-              <th>
-                <FiltroCol valor={qOc} onChange={setQOc} />
-              </th>
-              <th>
-                <FiltroCol valor={qProv} onChange={setQProv} />
-              </th>
-              <th colSpan={7} />
-              <th>
-                <FiltroCol valor={qResp} onChange={setQResp} />
-              </th>
-              <th colSpan={2} />
-            </tr>
-          </thead>
-
-          <tbody>
-            {filas.length === 0 && (
+          <PanelPlegable titulo="Órdenes de compra" extra={<span className="num text-xs text-ink-3">{filas.length}</span>}>
+            <div className="tabla-scroll">
+              <table className="tbl">
+            <thead>
               <tr>
-                <td colSpan={13} className="h-37! bg-surface text-center">
-                  <span className="inline-flex flex-col items-center gap-1.75">
-                    <LuSearchX size={26} strokeWidth={1.5} className="text-navy-200" />
-                    <span className="text-base font-semibold text-ink-2">Ninguna OC coincide</span>
-                    <span className="text-sm text-ink-3">
-                      Ajusta los filtros o activa «Ver OC inactivas».
-                    </span>
-                  </span>
-                </td>
+                <th className="w-11.5" title="Crear despacho">
+                  Prog.
+                </th>
+                <Th campo="id" className="w-27">
+                  Orden compra
+                </Th>
+                <Th campo="proveedor" className="min-w-52.5">
+                  Proveedor
+                </Th>
+                <Th campo="incoterm" className="w-23">
+                  Incoterm
+                </Th>
+                <th className="w-32">Propuesta</th>
+                <Th campo="fechaDoc" className="w-26">
+                  Fecha doc.
+                </Th>
+                <Th campo="ultEmbarque" className="w-28">
+                  Últ. embarque
+                </Th>
+                <th className="w-16.5 text-right!" title="Días desde la fecha de documento">
+                  Días
+                </th>
+                <th className="w-44">Situación</th>
+                <th className="w-32">Despachado</th>
+                <Th campo="resp" className="w-45">
+                  Resp. compra
+                </Th>
+                <th className="w-26">Estado</th>
+                <th className="w-40 text-right!">Acciones</th>
               </tr>
-            )}
+              <tr className="filtros">
+                <th />
+                <th>
+                  <FiltroCol valor={qOc} onChange={setQOc} />
+                </th>
+                <th>
+                  <FiltroCol valor={qProv} onChange={setQProv} />
+                </th>
+                <th colSpan={7} />
+                <th>
+                  <FiltroCol valor={qResp} onChange={setQResp} />
+                </th>
+                <th colSpan={2} />
+              </tr>
+            </thead>
 
-            {filas.map((oc) => {
-              const dias = diasEntre(parseISO(oc.fechaDoc), hoy())
-              const sit = SITUACIONES[oc.pendiente]
-              const IconoSit = sit?.icono
-              const totalKg = cantidadTotalOc(oc)
-              const pct = totalKg ? Math.round((cantidadDespachada(oc) / totalKg) * 100) : 0
-              const cerrada = oc.estado === 'cerrada'
-              const alerta = alertaDelHilo(hilos[oc.id])
-              const esperandoOc = esperando.includes(oc.id)
-              const sitAlerta = SIT_ALERTA[alerta]
-              // el lomo solo se pinta cuando la fila pide acción: así el ojo va a lo que falta
-              const spine = !oc.activa
-                ? 'rgba(0,48,73,0.16)'
-                : sitAlerta
-                  ? `var(--color-${alerta === 'retraso' ? 'ambar-500' : 'rojo-600'})`
-                  : !cerrada && oc.pendiente
-                    ? 'var(--color-ambar-500)'
-                    : 'transparent'
-              const embarqueViejo = oc.ultEmbarque && diasEntre(parseISO(oc.ultEmbarque), hoy()) > 120
-
-              return (
-                <tr key={oc.id} className={cx(!oc.activa && 'row-off')} style={{ '--spine': spine }}>
-                  <td className="text-center">
-                    <button
-                      disabled={!oc.activa || cerrada}
-                      onClick={() => setOcDespacho(oc)}
-                      title={
-                        cerrada
-                          ? 'OC cerrada — no admite despachos'
-                          : !oc.activa
-                            ? 'OC inactiva'
-                            : 'Crear despacho'
-                      }
-                      className={cx(
-                        'inline-flex h-6 w-6.5 items-center justify-center rounded-xs border transition duration-100',
-                        'hover:not-disabled:border-navy-800 hover:not-disabled:bg-navy-800 hover:not-disabled:text-white',
-                        'active:not-disabled:scale-90 disabled:cursor-not-allowed disabled:opacity-30',
-                        oc.sugerencia
-                          ? 'border-ambar-100 bg-ambar-50 text-ambar-700'
-                          : 'border-line bg-surface text-navy-600',
-                      )}
-                    >
-                      <LuTruck size={14} />
-                    </button>
-                  </td>
-
-                  <td className="cell-key">{oc.id}</td>
-
-                  <td className="cell-strong cell-cut" title={oc.proveedor}>
-                    {oc.proveedor}
-                  </td>
-
-                  <td>{oc.incoterm}</td>
-
-                  <td>
-                    {oc.sugerencia ? (
-                      <span
-                        title="Hay una propuesta de ruta y fechas lista para esta OC"
-                        className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-ambar-700"
-                      >
-                        <LuSparkles size={13} className="text-ambar-500" />
-                        Sugerencia
+            <tbody>
+              {filas.length === 0 && (
+                <tr>
+                  <td colSpan={13} className="h-37! bg-surface text-center">
+                    <span className="inline-flex flex-col items-center gap-1.75">
+                      <LuSearchX size={26} strokeWidth={1.5} className="text-navy-200" />
+                      <span className="text-base font-semibold text-ink-2">Ninguna OC coincide</span>
+                      <span className="text-sm text-ink-3">
+                        Ajusta los filtros o activa «Ver OC inactivas».
                       </span>
-                    ) : (
-                      <span className="text-ink-4">—</span>
-                    )}
-                  </td>
-
-                  <td className="num text-ink">{fmtFechaCorta(oc.fechaDoc)}</td>
-
-                  {/* NUEVA: última vez que este producto ingresó de este proveedor */}
-                  <td>
-                    {oc.ultEmbarque ? (
-                      <span className="flex flex-col gap-px leading-tight">
-                        <span className="num text-ink">{fmtFechaCorta(oc.ultEmbarque)}</span>
-                        <span
-                          className={cx(
-                            'text-3xs',
-                            embarqueViejo ? 'font-semibold text-ambar-600' : 'text-ink-4',
-                          )}
-                        >
-                          {desdeHoy(oc.ultEmbarque)}
-                        </span>
-                      </span>
-                    ) : (
-                      <span className="text-sm text-ink-4" title="Primer ingreso de este material">
-                        Primer ingreso
-                      </span>
-                    )}
-                  </td>
-
-                  <td className={cx('cell-num', dias > 90 && 'text-ink-3')}>{dias}</td>
-
-                  <td>
-                    {sitAlerta ? (
-                      <span
-                        className={cx('inline-flex items-center gap-1.5 font-bold', sitAlerta.clase)}
-                        title={`El proveedor reporta ${alerta} en el correo de esta OC`}
-                      >
-                        <LuCircleAlert size={13} />
-                        {sitAlerta.rotulo}
-                      </span>
-                    ) : sit ? (
-                      <span className="inline-flex items-center gap-1.5 text-ink-2">
-                        <IconoSit size={13} className="text-ink-3" />
-                        {sit.rotulo}
-                      </span>
-                    ) : (
-                      <span className="text-ink-4">Sin pendientes</span>
-                    )}
-                  </td>
-
-                  <td>
-                    {pct > 0 ? (
-                      <span className="flex items-center gap-2">
-                        <span className="h-1 w-11 shrink-0 overflow-hidden rounded-sm bg-surface-3">
-                          <span
-                            className="block h-full rounded-sm bg-teal-600"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </span>
-                        <span className="num">{pct}%</span>
-                      </span>
-                    ) : (
-                      <span className="text-ink-4">—</span>
-                    )}
-                  </td>
-
-                  <td className="cell-cut" title={oc.resp}>
-                    {oc.resp}
-                  </td>
-
-                  {/* Estado de la OC: se cambia desde la propia fila */}
-                  <td>
-                    <button
-                      onClick={() => {
-                        toggleEstado(oc.id)
-                        avisar(`OC ${oc.id} ${cerrada ? 'reabierta' : 'cerrada'}.`, cerrada ? 'ok' : 'alerta')
-                      }}
-                      title={cerrada ? 'Reabrir la OC' : 'Cerrar la OC (deja de admitir despachos)'}
-                      className={cx(
-                        'inline-flex h-5.5 items-center gap-1.5 whitespace-nowrap rounded-full border py-0 pl-1.75 pr-2.25 text-xs font-semibold transition duration-100 hover:brightness-97 active:scale-95',
-                        sitAlerta
-                          ? sitAlerta.chip
-                          : cerrada
-                            ? 'border-line bg-surface-3 text-ink-2'
-                            : 'border-teal-100 bg-teal-50 text-teal-700',
-                      )}
-                    >
-                      {cerrada ? 'Cerrada' : 'Abierta'}
-                    </button>
-                  </td>
-
-                  <td>
-                    <div className="flex items-center justify-end">
-                      {/* Correo del proveedor: se pinta en rojo cuando el hilo
-                          trae palabras de urgencia, retraso o problema. */}
-                      <button
-                        className={cx('ico', alerta && 'ico-rojo ico-on')}
-                        title={
-                          esperandoOc
-                            ? 'Correo enviado: esperando respuesta del proveedor'
-                            : alerta
-                              ? `Correo del proveedor con ${alerta} — revisar el hilo de la OC`
-                              : 'Correo al proveedor: consultar recepción y disponibilidad'
-                        }
-                        onClick={() => setOcCorreo(oc)}
-                      >
-                        {esperandoOc ? (
-                          <LuLoaderCircle size={14} className="motion-safe:animate-spin" />
-                        ) : alerta ? (
-                          <LuMailWarning size={14} />
-                        ) : (
-                          <LuMail size={14} />
-                        )}
-                      </button>
-
-                      <button className="ico" title="Editar OC: cantidades, precios y datos" onClick={() => setOcEditar(oc)}>
-                        <LuSquarePen size={14} />
-                      </button>
-
-                      <button
-                        className={cx('ico', oc.nota && 'ico-on')}
-                        title={oc.nota || 'Sin nota'}
-                        onClick={() => setOcEditar(oc)}
-                      >
-                        <LuStickyNote size={14} />
-                      </button>
-
-                      <button
-                        className={cx('ico', oc.selloPendiente && 'ico-on')}
-                        title={oc.selloPendiente ? 'Sello pendiente' : 'Sellada'}
-                        onClick={() =>
-                          avisar(
-                            oc.selloPendiente
-                              ? `OC ${oc.id}: sello pendiente de aplicar.`
-                              : `OC ${oc.id} ya está sellada.`,
-                            oc.selloPendiente ? 'alerta' : 'ok',
-                          )
-                        }
-                      >
-                        <LuStamp size={14} />
-                      </button>
-
-                      {/* Inactivar / reactivar */}
-                      <button
-                        className="ico ico-ambar"
-                        title={oc.activa ? 'Inactivar OC' : 'Reactivar OC'}
-                        onClick={() => {
-                          toggleActiva(oc.id)
-                          avisar(
-                            `OC ${oc.id} ${oc.activa ? 'inactivada' : 'reactivada'}.`,
-                            oc.activa ? 'alerta' : 'ok',
-                          )
-                        }}
-                      >
-                        {oc.activa ? <LuBan size={14} /> : <LuRotateCcw size={14} />}
-                      </button>
-
-                      <button
-                        className="ico ico-rojo"
-                        title="Eliminar OC"
-                        onClick={() => avisar('Eliminar requiere aprobación de Compras (demo).', 'rojo')}
-                      >
-                        <LuTrash2 size={14} />
-                      </button>
-                    </div>
+                    </span>
                   </td>
                 </tr>
-              )
-            })}
-          </tbody>
-            </table>
-          </div>
+              )}
+
+              {filas.map((oc) => {
+                const dias = diasEntre(parseISO(oc.fechaDoc), hoy())
+                const sit = SITUACIONES[oc.pendiente]
+                const IconoSit = sit?.icono
+                const totalKg = cantidadTotalOc(oc)
+                const pct = totalKg ? Math.round((cantidadDespachada(oc) / totalKg) * 100) : 0
+                const cerrada = oc.estado === 'cerrada'
+                const alerta = alertaDelHilo(hilos[oc.id])
+                const esperandoOc = esperando.includes(oc.id)
+                const sitAlerta = SIT_ALERTA[alerta]
+                // el lomo solo se pinta cuando la fila pide acción: así el ojo va a lo que falta
+                const spine = !oc.activa
+                  ? 'rgba(0,48,73,0.16)'
+                  : sitAlerta
+                    ? `var(--color-${alerta === 'retraso' ? 'ambar-500' : 'rojo-600'})`
+                    : !cerrada && oc.pendiente
+                      ? 'var(--color-ambar-500)'
+                      : 'transparent'
+                const embarqueViejo = oc.ultEmbarque && diasEntre(parseISO(oc.ultEmbarque), hoy()) > 120
+
+                return (
+                  <tr key={oc.id} className={cx(!oc.activa && 'row-off')} style={{ '--spine': spine }}>
+                    <td className="text-center">
+                      <button
+                        disabled={!oc.activa || cerrada}
+                        onClick={() => setOcDespacho(oc)}
+                        title={
+                          cerrada
+                            ? 'OC cerrada — no admite despachos'
+                            : !oc.activa
+                              ? 'OC inactiva'
+                              : 'Crear despacho'
+                        }
+                        className={cx(
+                          'inline-flex h-6 w-6.5 items-center justify-center rounded-xs border transition duration-100',
+                          'hover:not-disabled:border-navy-800 hover:not-disabled:bg-navy-800 hover:not-disabled:text-white',
+                          'active:not-disabled:scale-90 disabled:cursor-not-allowed disabled:opacity-30',
+                          oc.sugerencia
+                            ? 'border-ambar-100 bg-ambar-50 text-ambar-700'
+                            : 'border-line bg-surface text-navy-600',
+                        )}
+                      >
+                        <LuTruck size={14} />
+                      </button>
+                    </td>
+
+                    <td className="cell-key">{oc.id}</td>
+
+                    <td className="cell-strong cell-cut" title={oc.proveedor}>
+                      {oc.proveedor}
+                    </td>
+
+                    <td>{oc.incoterm}</td>
+
+                    <td>
+                      {oc.sugerencia ? (
+                        <span
+                          title="Hay una propuesta de ruta y fechas lista para esta OC"
+                          className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-ambar-700"
+                        >
+                          <LuSparkles size={13} className="text-ambar-500" />
+                          Sugerencia
+                        </span>
+                      ) : (
+                        <span className="text-ink-4">—</span>
+                      )}
+                    </td>
+
+                    <td className="num text-ink">{fmtFechaCorta(oc.fechaDoc)}</td>
+
+                    {/* NUEVA: última vez que este producto ingresó de este proveedor */}
+                    <td>
+                      {oc.ultEmbarque ? (
+                        <span className="flex flex-col gap-px leading-tight">
+                          <span className="num text-ink">{fmtFechaCorta(oc.ultEmbarque)}</span>
+                          <span
+                            className={cx(
+                              'text-3xs',
+                              embarqueViejo ? 'font-semibold text-ambar-600' : 'text-ink-4',
+                            )}
+                          >
+                            {desdeHoy(oc.ultEmbarque)}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-sm text-ink-4" title="Primer ingreso de este material">
+                          Primer ingreso
+                        </span>
+                      )}
+                    </td>
+
+                    <td className={cx('cell-num', dias > 90 && 'text-ink-3')}>{dias}</td>
+
+                    <td>
+                      {sitAlerta ? (
+                        <span
+                          className={cx('inline-flex items-center gap-1.5 font-bold', sitAlerta.clase)}
+                          title={`El proveedor reporta ${alerta} en el correo de esta OC`}
+                        >
+                          <LuCircleAlert size={13} />
+                          {sitAlerta.rotulo}
+                        </span>
+                      ) : sit ? (
+                        <span className="inline-flex items-center gap-1.5 text-ink-2">
+                          <IconoSit size={13} className="text-ink-3" />
+                          {sit.rotulo}
+                        </span>
+                      ) : (
+                        <span className="text-ink-4">Sin pendientes</span>
+                      )}
+                    </td>
+
+                    <td>
+                      {pct > 0 ? (
+                        <span className="flex items-center gap-2">
+                          <span className="h-1 w-11 shrink-0 overflow-hidden rounded-sm bg-surface-3">
+                            <span
+                              className="block h-full rounded-sm bg-teal-600"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </span>
+                          <span className="num">{pct}%</span>
+                        </span>
+                      ) : (
+                        <span className="text-ink-4">—</span>
+                      )}
+                    </td>
+
+                    <td className="cell-cut" title={oc.resp}>
+                      {oc.resp}
+                    </td>
+
+                    {/* Estado de la OC: se cambia desde la propia fila */}
+                    <td>
+                      <button
+                        onClick={() => {
+                          toggleEstado(oc.id)
+                          avisar(`OC ${oc.id} ${cerrada ? 'reabierta' : 'cerrada'}.`, cerrada ? 'ok' : 'alerta')
+                        }}
+                        title={cerrada ? 'Reabrir la OC' : 'Cerrar la OC (deja de admitir despachos)'}
+                        className={cx(
+                          'inline-flex h-5.5 items-center gap-1.5 whitespace-nowrap rounded-full border py-0 pl-1.75 pr-2.25 text-xs font-semibold transition duration-100 hover:brightness-97 active:scale-95',
+                          sitAlerta
+                            ? sitAlerta.chip
+                            : cerrada
+                              ? 'border-line bg-surface-3 text-ink-2'
+                              : 'border-teal-100 bg-teal-50 text-teal-700',
+                        )}
+                      >
+                        {cerrada ? 'Cerrada' : 'Abierta'}
+                      </button>
+                    </td>
+
+                    <td>
+                      <div className="flex items-center justify-end">
+                        {/* Correo del proveedor: se pinta en rojo cuando el hilo
+                            trae palabras de urgencia, retraso o problema. */}
+                        <button
+                          className={cx('ico', alerta && 'ico-rojo ico-on')}
+                          title={
+                            esperandoOc
+                              ? 'Correo enviado: esperando respuesta del proveedor'
+                              : alerta
+                                ? `Correo del proveedor con ${alerta} — revisar el hilo de la OC`
+                                : 'Correo al proveedor: consultar recepción y disponibilidad'
+                          }
+                          onClick={() => setOcCorreo(oc)}
+                        >
+                          {esperandoOc ? (
+                            <LuLoaderCircle size={14} className="motion-safe:animate-spin" />
+                          ) : alerta ? (
+                            <LuMailWarning size={14} />
+                          ) : (
+                            <LuMail size={14} />
+                          )}
+                        </button>
+
+                        <button className="ico" title="Editar OC: cantidades, precios y datos" onClick={() => setOcEditar(oc)}>
+                          <LuSquarePen size={14} />
+                        </button>
+
+                        <button
+                          className={cx('ico', oc.nota && 'ico-on')}
+                          title={oc.nota || 'Sin nota'}
+                          onClick={() => setOcEditar(oc)}
+                        >
+                          <LuStickyNote size={14} />
+                        </button>
+
+                        <button
+                          className={cx('ico', oc.selloPendiente && 'ico-on')}
+                          title={oc.selloPendiente ? 'Sello pendiente' : 'Sellada'}
+                          onClick={() =>
+                            avisar(
+                              oc.selloPendiente
+                                ? `OC ${oc.id}: sello pendiente de aplicar.`
+                                : `OC ${oc.id} ya está sellada.`,
+                              oc.selloPendiente ? 'alerta' : 'ok',
+                            )
+                          }
+                        >
+                          <LuStamp size={14} />
+                        </button>
+
+                        {/* Inactivar / reactivar */}
+                        <button
+                          className="ico ico-ambar"
+                          title={oc.activa ? 'Inactivar OC' : 'Reactivar OC'}
+                          onClick={() => {
+                            toggleActiva(oc.id)
+                            avisar(
+                              `OC ${oc.id} ${oc.activa ? 'inactivada' : 'reactivada'}.`,
+                              oc.activa ? 'alerta' : 'ok',
+                            )
+                          }}
+                        >
+                          {oc.activa ? <LuBan size={14} /> : <LuRotateCcw size={14} />}
+                        </button>
+
+                        <button
+                          className="ico ico-rojo"
+                          title="Eliminar OC"
+                          onClick={() => avisar('Eliminar requiere aprobación de Compras (demo).', 'rojo')}
+                        >
+                          <LuTrash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+              </table>
+            </div>
+          </PanelPlegable>
         </div>
       </div>
 

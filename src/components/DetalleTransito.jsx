@@ -4,12 +4,6 @@ import { fmtFechaCorta } from '../lib/fechas'
 import { NIVELES, nivelDe } from '../lib/torre'
 import { useOc } from '../data/store'
 
-const TONO = {
-  'Dentro de tiempo': { caja: 'border-teal-100 bg-teal-50 text-teal-700', punto: 'bg-teal-600' },
-  'En riesgo': { caja: 'border-ambar-100 bg-ambar-50 text-ambar-700', punto: 'bg-ambar-500' },
-  'Fuera de tiempo': { caja: 'border-rojo-100 bg-rojo-50 text-rojo-700', punto: 'bg-rojo-600' },
-}
-
 // Recomendación por nivel de escalamiento, igual que en la torre: el nivel define
 // a quién se comunica y qué se hace.
 const RECOMENDACION = {
@@ -61,7 +55,6 @@ function Paso({ titulo, nota, estado }) {
 /** Detalle del embarque en tránsito: ubicación, proyección y línea de tiempo. */
 export default function DetalleTransito({ embarque: e }) {
   const { avisar } = useOc()
-  const t = TONO[e.riesgo]
   const nivel = nivelDe(e.delay)
   const desviacion = e.delay > 0 ? `+${e.delay} d` : '0 d'
   const nuevaEta = fmtFechaCorta(e.planta)
@@ -105,7 +98,7 @@ export default function DetalleTransito({ embarque: e }) {
         <div className="panel flex flex-col gap-3 p-4">
           <div className="lbl">Proyección automática</div>
 
-          <div className={cx('rounded-sm border p-3 text-sm', t.caja)}>
+          <div className="tarjeta p-3 text-sm">
             <b className="flex items-center gap-1.5 font-bold">
               <LuTriangleAlert size={13} /> {e.riesgo}
             </b>

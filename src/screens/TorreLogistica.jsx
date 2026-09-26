@@ -15,6 +15,7 @@ import {
   LuWarehouse,
 } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
+import PanelPlegable from '../components/ui/PanelPlegable'
 import Modal from '../components/ui/Modal'
 import { Select } from '../components/ui/Field'
 import { BarrasH, BarrasV } from '../components/ui/Graficos'
@@ -77,31 +78,33 @@ function Progreso({ pct }) {
 }
 
 /** Tabla estándar de la pantalla: cabeceras + cuerpo con estado vacío. */
-function Tabla({ columnas, filas, vacio, children }) {
+function Tabla({ titulo, columnas, filas, vacio, children }) {
   return (
-    <div className="panel tabla-scroll">
-      <table className="tbl">
-        <thead>
-          <tr>
-            {columnas.map(([rotulo, ancho]) => (
-              <th key={rotulo} className={ancho}>
-                {rotulo}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {filas.length === 0 && (
+    <PanelPlegable titulo={titulo} extra={<span className="num text-xs text-ink-3">{filas.length}</span>}>
+      <div className="tabla-scroll">
+        <table className="tbl">
+          <thead>
             <tr>
-              <td colSpan={columnas.length} className="h-[140px]! bg-surface text-center text-sm text-ink-3">
-                {vacio}
-              </td>
+              {columnas.map(([rotulo, ancho]) => (
+                <th key={rotulo} className={ancho}>
+                  {rotulo}
+                </th>
+              ))}
             </tr>
-          )}
-          {filas.map(children)}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {filas.length === 0 && (
+              <tr>
+                <td colSpan={columnas.length} className="h-[140px]! bg-surface text-center text-sm text-ink-3">
+                  {vacio}
+                </td>
+              </tr>
+            )}
+            {filas.map(children)}
+          </tbody>
+        </table>
+      </div>
+    </PanelPlegable>
   )
 }
 
@@ -310,9 +313,9 @@ export default function TorreLogistica() {
         <>
           <div className="flex flex-wrap gap-2">
             <Kpi rotulo="Total embarques" valor={kpis.total} />
-            <Kpi rotulo="En planta" valor={kpis.planta} tono="border-teal-100 bg-teal-50" />
-            <Kpi rotulo="En tránsito" valor={kpis.transito} tono="border-ambar-100 bg-ambar-50" />
-            <Kpi rotulo="Alertados" valor={kpis.alertados} tono="border-rojo-100 bg-rojo-50" />
+            <Kpi rotulo="En planta" valor={kpis.planta} />
+            <Kpi rotulo="En tránsito" valor={kpis.transito} />
+            <Kpi rotulo="Alertados" valor={kpis.alertados} />
           </div>
 
           <div className="panel">
@@ -359,6 +362,7 @@ export default function TorreLogistica() {
           </div>
 
           <Tabla
+            titulo="Embarques"
             columnas={[
               ['REF', 'w-[100px]'],
               ['OC', 'w-[110px]'],
@@ -397,6 +401,7 @@ export default function TorreLogistica() {
       {/* ------------------------------- ORIGEN ------------------------------- */}
       {tab === 'origen' && (
         <Tabla
+          titulo="Embarques en origen"
           columnas={[
             ['REF', 'w-[100px]'],
             ['OC', 'w-[110px]'],
@@ -428,6 +433,7 @@ export default function TorreLogistica() {
       {/* -------------------------- INTERNACIONAL --------------------------- */}
       {tab === 'internacional' && (
         <Tabla
+          titulo="En tránsito internacional"
           columnas={[
             ['REF', 'w-[100px]'],
             ['SKU', 'w-[110px]'],
@@ -463,6 +469,7 @@ export default function TorreLogistica() {
       {/* ------------------------------- ADUANA ----------------------------- */}
       {tab === 'aduana' && (
         <Tabla
+          titulo="En aduana"
           columnas={[
             ['REF', 'w-[100px]'],
             ['Proveedor', 'w-[140px]'],
@@ -506,6 +513,7 @@ export default function TorreLogistica() {
       {/* ---------------------------- A PLANTA ------------------------------ */}
       {tab === 'aPlanta' && (
         <Tabla
+          titulo="En tránsito a planta"
           columnas={[
             ['REF', 'w-[100px]'],
             ['SKU', 'w-[110px]'],
@@ -539,6 +547,7 @@ export default function TorreLogistica() {
       {/* ------------------------------- PLANTA ----------------------------- */}
       {tab === 'planta' && (
         <Tabla
+          titulo="En planta"
           columnas={[
             ['REF', 'w-[100px]'],
             ['SKU', 'w-[110px]'],
@@ -581,6 +590,7 @@ export default function TorreLogistica() {
             </Button>
           </div>
           <Tabla
+            titulo="Embarques alertados"
             columnas={[
               ['REF', 'w-[100px]'],
               ['Proveedor', 'w-[140px]'],

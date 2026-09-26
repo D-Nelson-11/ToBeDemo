@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   LuCalendarClock,
+  LuChevronDown,
   LuCircleAlert,
   LuCircleCheck,
   LuListChecks,
@@ -15,6 +16,7 @@ import {
   LuTriangleAlert,
 } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
+import PanelPlegable from '../components/ui/PanelPlegable'
 import { Field, Input, Select, Textarea } from '../components/ui/Field'
 import { useOc } from '../data/store'
 import { INCOTERMS, MONEDAS, REGIMENES, RUTAS } from '../data/catalogos'
@@ -191,6 +193,8 @@ export default function Gestiones() {
   const [panel, setPanel] = useState(null)
   const [sel, setSel] = useState(() => new Set())
   const [datos, setDatos] = useState({})
+  // Solo guarda las OC que el usuario abrió o cerró a mano; el resto sigue a la selección.
+  const [desplegado, setDesplegado] = useState({})
 
   // Los despachos ya programados son los que necesitan gestión aduanera.
   const despachos = useMemo(() => {
@@ -323,11 +327,10 @@ export default function Gestiones() {
       <div className="contenedor grid grid-cols-1 items-start gap-4 py-5 lg:grid-cols-[320px_minmax(0,1fr)]">
         {/* ------------------------------- izquierda ------------------------------ */}
         <div className="flex flex-col gap-4">
-          <div className="panel">
-            <div className="panel-head">
-              <span className="panel-title">Despachos</span>
-              <span className="num ml-auto text-xs text-ink-3">{despachos.length}</span>
-            </div>
+          <PanelPlegable
+            titulo="Despachos"
+            extra={<span className="num text-xs text-ink-3">{despachos.length}</span>}
+          >
             <p className="border-b border-line bg-surface-2 px-3 py-2 text-sm text-ink-3">
               Se pueden marcar varios despachos, siempre que sean de la misma OC y por la misma
               ruta. Marcar uno de otro grupo reemplaza la selección.
@@ -337,6 +340,7 @@ export default function Gestiones() {
                 const { oc, ruta, items } = grupo
                 const activo = grupo.clave === grupoActivo
                 const todos = items.every((d) => sel.has(d.clave))
+                const abierto = desplegado[grupo.clave] ?? activo
                 return (
                   <li key={grupo.clave}>
                     <div
@@ -358,88 +362,107 @@ export default function Gestiones() {
                         }}
                         onChange={(e) => marcarGrupo(grupo, e.target.checked)}
                       />
-                      <span className="min-w-0 flex-1">
-                        <span
-                          className={cx(
-                            'block text-sm font-bold',
-                            activo ? 'text-navy-800' : 'text-ink-3',
-                          )}
-                        >
-                          OC {oc.id}
-                        </span>
-                        {/* La ruta es parte de la identidad del grupo: no se pueden mezclar */}
-                        <span className="block truncate text-xs text-ink-3">
-                          {ruta.origen} → {ruta.frontera}
-                        </span>
-                      </span>
-                      <span className="num mt-0.5 text-xs text-ink-3">{items.length}</span>
-                    </div>
-
-                    {items.map((d) => {
-                      const dg = datos[d.clave]
-                      const completo =
-                        dg &&
-                        !faltantes(dg.factura, CAMPOS_FACTURA).length &&
-                        !faltantes(dg.bl, CAMPOS_BL).length &&
-                        dg.skus.length > 0
-                      const iniciado =
-                        dg && (Object.keys(dg.factura).length || Object.keys(dg.bl).length)
-                      const marcado = sel.has(d.clave)
-                      return (
-                        <div
-                          key={d.clave}
-                          className={cx(
-                            'flex items-center gap-2 border-b border-line-soft px-3 py-2 transition-colors duration-100',
-                            marcado ? 'bg-navy-50' : 'hover:bg-surface-2',
-                          )}
-                        >
-                          <input
-                            type="checkbox"
-                            className="chk"
-                            aria-label={'Seleccionar ' + d.despacho.id}
-                            checked={marcado}
-                            onChange={() => alternar(d)}
-                          />
-                          <button
-                            onClick={() => alternar(d)}
-                            className="min-w-0 flex-1 text-left"
-                            title={activo ? undefined : 'Reemplaza la selección actual'}
-                          >
-                            <span className="block text-base font-bold text-ink">
-                              {d.despacho.id}
-                            </span>
-                            <span className="block truncate text-sm text-ink-3">
-                              {fmtNum(d.despacho.cantidad)} {d.material?.unidad} ·{' '}
-                              {d.etd ? fmtFechaCorta(d.etd) : '—'}
-                            </span>
-                          </button>
+                      <button
+                        onClick={() => setDesplegado((prev) => ({ ...prev, [grupo.clave]: !abierto }))}
+                        aria-expanded={abierto}
+                        className="flex min-w-0 flex-1 items-start gap-2 text-left"
+                      >
+                        <span className="min-w-0 flex-1">
                           <span
                             className={cx(
-                              'shrink-0 whitespace-nowrap rounded-full px-2 py-[3px] text-xs font-semibold',
-                              completo
-                                ? 'bg-teal-50 text-teal-700'
-                                : iniciado
-                                  ? 'bg-ambar-50 text-ambar-700'
-                                  : 'bg-surface-3 text-ink-3',
+                              'block text-sm font-bold',
+                              activo ? 'text-navy-800' : 'text-ink-3',
                             )}
                           >
-                            {completo ? 'Completo' : iniciado ? 'En proceso' : 'Sin iniciar'}
+                            OC {oc.id}
                           </span>
-                        </div>
-                      )
-                    })}
+                          {/* La ruta es parte de la identidad del grupo: no se pueden mezclar */}
+                          <span className="block truncate text-xs text-ink-3">
+                            {ruta.origen} → {ruta.frontera}
+                          </span>
+                        </span>
+                        <span className="num mt-0.5 text-xs text-ink-3">{items.length}</span>
+                        <LuChevronDown
+                          size={15}
+                          className={cx(
+                            'mt-0.5 shrink-0 text-ink-3 transition-transform duration-200 ease-[var(--ease-out-soft)] motion-reduce:transition-none',
+                            abierto && 'rotate-180',
+                          )}
+                        />
+                      </button>
+                    </div>
+
+                    {/* grid 0fr → 1fr anima la altura sin medirla */}
+                    <div
+                      className={cx(
+                        'grid transition-[grid-template-rows] duration-200 ease-[var(--ease-out-soft)] motion-reduce:transition-none',
+                        abierto ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+                      )}
+                    >
+                      {/* inert saca del Tab los checks escondidos. React 18 lo quiere como '' (con true avisa) */}
+                      <div className="overflow-hidden" inert={abierto ? undefined : ''}>
+                        {items.map((d) => {
+                          const dg = datos[d.clave]
+                          const completo =
+                            dg &&
+                            !faltantes(dg.factura, CAMPOS_FACTURA).length &&
+                            !faltantes(dg.bl, CAMPOS_BL).length &&
+                            dg.skus.length > 0
+                          const iniciado =
+                            dg && (Object.keys(dg.factura).length || Object.keys(dg.bl).length)
+                          const marcado = sel.has(d.clave)
+                          return (
+                            <div
+                              key={d.clave}
+                              className={cx(
+                                'flex items-center gap-2 border-b border-line-soft px-3 py-2 transition-colors duration-100',
+                                marcado ? 'bg-navy-50' : 'hover:bg-surface-2',
+                              )}
+                            >
+                              <input
+                                type="checkbox"
+                                className="chk"
+                                aria-label={'Seleccionar ' + d.despacho.id}
+                                checked={marcado}
+                                onChange={() => alternar(d)}
+                              />
+                              <button
+                                onClick={() => alternar(d)}
+                                className="min-w-0 flex-1 text-left"
+                                title={activo ? undefined : 'Reemplaza la selección actual'}
+                              >
+                                <span className="block text-base font-bold text-ink">
+                                  {d.despacho.id}
+                                </span>
+                                <span className="block truncate text-sm text-ink-3">
+                                  {fmtNum(d.despacho.cantidad)} {d.material?.unidad} ·{' '}
+                                  {d.etd ? fmtFechaCorta(d.etd) : '—'}
+                                </span>
+                              </button>
+                              <span
+                                className={cx(
+                                  'shrink-0 whitespace-nowrap rounded-full px-2 py-[3px] text-xs font-semibold',
+                                  completo
+                                    ? 'bg-teal-50 text-teal-700'
+                                    : iniciado
+                                      ? 'bg-ambar-50 text-ambar-700'
+                                      : 'bg-surface-3 text-ink-3',
+                                )}
+                              >
+                                {completo ? 'Completo' : iniciado ? 'En proceso' : 'Sin iniciar'}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
                   </li>
                 )
               })}
             </ul>
-          </div>
+          </PanelPlegable>
 
-          <div className="panel">
-            <div className="panel-head">
-              <span className="panel-title">
-                Cargar {tab === 'factura' ? 'factura' : 'BL'}
-              </span>
-            </div>
+          <PanelPlegable titulo={'Cargar ' + (tab === 'factura' ? 'factura' : 'BL')}>
             <div className="flex flex-col gap-3 p-4">
               {/* El tab manda: elige el documento que se carga y la extracción que se ve */}
               <div className="segbar w-full">
@@ -456,14 +479,14 @@ export default function Gestiones() {
                       {falta === 0 ? (
                         <LuCircleCheck
                           size={13}
-                          className={tab === t.id ? 'text-teal-100' : 'text-teal-600'}
+                          className="text-teal-600"
                         />
                       ) : (
                         <span
                           title={`${falta} dato${falta === 1 ? '' : 's'} sin llenar`}
                           className={cx(
                             'num rounded-full px-1.5 text-3xs font-bold',
-                            tab === t.id ? 'bg-white/20 text-white' : 'bg-ambar-50 text-ambar-700',
+                            tab === t.id ? 'bg-ambar-100 text-ambar-700' : 'bg-ambar-50 text-ambar-700',
                           )}
                         >
                           {falta}
@@ -600,7 +623,7 @@ export default function Gestiones() {
                 </div>
               )}
             </div>
-          </div>
+          </PanelPlegable>
         </div>
 
         {/* ------------------------------- derecha -------------------------------- */}
@@ -622,7 +645,7 @@ export default function Gestiones() {
           <div className="flex flex-col gap-4 p-4">
             {/* Aviso de lo que falta: primero en esta pestaña, después en la otra */}
             {faltaEste.length > 0 && (
-              <div className="flex items-start gap-2.5 rounded-sm border border-ambar-100 bg-ambar-50 px-3 py-2.5 text-sm text-ambar-700">
+              <div className="flex items-start gap-2.5 tarjeta px-3 py-2.5 text-sm">
                 <LuCircleAlert size={15} className="mt-px shrink-0" />
                 <span>
                   Falta información en <b className="font-bold">{tab === 'factura' ? 'Factura' : 'BL'}</b>:{' '}

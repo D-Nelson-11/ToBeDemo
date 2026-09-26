@@ -18,6 +18,7 @@ import {
 import Modal from '../components/ui/Modal'
 import Button, { cx } from '../components/ui/Button'
 import { Select } from '../components/ui/Field'
+import PanelPlegable from '../components/ui/PanelPlegable'
 import BitacoraAduana from '../components/BitacoraAduana'
 import CostosLogisticos from './CostosLogisticos'
 import LiberacionDocumentos from './LiberacionDocumentos'
@@ -66,30 +67,24 @@ const TONO_RIESGO = {
   'Fuera de tiempo': { chip: 'bg-rojo-50 text-rojo-700', punto: 'bg-rojo-600', texto: 'text-rojo-700', lomo: 'var(--color-rojo-600)' },
 }
 
+// Todo lo de abajo vive fuera de la tabla: ahí el "en riesgo" va en azul, no en ámbar.
 const TONO_SLA = {
   ok: 'bg-teal-50 text-teal-700',
-  riesgo: 'bg-ambar-50 text-ambar-700',
+  riesgo: 'bg-navy-50 text-navy-700',
   vencido: 'bg-rojo-50 text-rojo-700',
 }
 
 const TONO_NIVEL = {
   teal: 'border-teal-100 bg-teal-50 text-teal-700',
-  ambar: 'border-ambar-100 bg-ambar-50 text-ambar-700',
+  ambar: 'border-navy-100 bg-navy-50 text-navy-700',
   rojo: 'border-rojo-100 bg-rojo-50 text-rojo-700',
 }
 
-function Kpi({ rotulo, valor, alerta }) {
+function Kpi({ rotulo, valor }) {
   return (
-    <div
-      className={cx(
-        'min-w-[150px] flex-1 rounded-sm border px-3 py-2.5',
-        alerta ? 'border-rojo-100 bg-rojo-50' : 'border-line bg-surface',
-      )}
-    >
+    <div className="tarjeta min-w-[150px] flex-1 px-3 py-2.5">
       <div className="text-sm text-ink-3">{rotulo}</div>
-      <div className={cx('num text-2xl font-bold', alerta ? 'text-rojo-700' : 'text-navy-800')}>
-        {valor}
-      </div>
+      <div className="num text-2xl font-bold">{valor}</div>
     </div>
   )
 }
@@ -97,7 +92,7 @@ function Kpi({ rotulo, valor, alerta }) {
 function BarraReq({ items }) {
   const hechos = items.filter(([, ok]) => ok).length
   const pct = Math.round((hechos / items.length) * 100)
-  const tono = pct === 100 ? 'bg-teal-600' : pct >= 50 ? 'bg-ambar-500' : 'bg-rojo-600'
+  const tono = pct === 100 ? 'bg-teal-600' : pct >= 50 ? 'bg-navy-400' : 'bg-rojo-600'
   return (
     <div className="mb-2 flex items-center gap-2">
       <span className="h-[5px] flex-1 overflow-hidden rounded-full bg-surface-3">
@@ -228,12 +223,10 @@ export default function Torre() {
         {/* ------------------------------ EMBARQUES ------------------------------ */}
         {!esPagina && (
           <>
-            <div className="panel">
-              <div className="panel-head">
-                <span className="panel-title">
-                  Embarques — {segmento === 'All' ? 'todos los segmentos' : segmento}
-                </span>
-                <div className="ml-auto flex flex-wrap items-center gap-2">
+            <PanelPlegable
+              titulo={<>Embarques — {segmento === 'All' ? 'todos los segmentos' : segmento}</>}
+              acciones={
+                <div className="flex flex-wrap items-center gap-2">
                   <Select
                     placeholder="Todos los sitios"
                     options={sitios}
@@ -258,8 +251,8 @@ export default function Torre() {
                     />
                   </div>
                 </div>
-              </div>
-
+              }
+            >
               <div className="tabla-scroll">
                 <table className="tbl">
                   <thead>
@@ -347,13 +340,15 @@ export default function Torre() {
                   </tbody>
                 </table>
               </div>
-            </div>
+            </PanelPlegable>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <div className="panel">
-                <div className="panel-head">
-                  <span className="panel-title">Notas automáticas y propuestas de decisión</span>
-                </div>
+            {/* items-start: si uno se abre, el otro no se estira vacío */}
+            <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+              <PanelPlegable
+                titulo="Notas automáticas y propuestas de decisión"
+                extra={<span className="num text-xs text-ink-3">{alertas.length}</span>}
+                abiertoAlInicio={false}
+              >
                 <div className="flex flex-col gap-2 p-4">
                   {alertas.length === 0 && (
                     <p className="text-sm text-ink-3">
@@ -378,27 +373,21 @@ export default function Torre() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </PanelPlegable>
 
-              <div className="panel">
-                <div className="panel-head">
-                  <span className="panel-title">Reglas de comunicación</span>
-                </div>
+              <PanelPlegable titulo="Reglas de comunicación" abiertoAlInicio={false}>
                 <div className="flex flex-col gap-2 p-4">
                   {[1, 2, 3].map((n) => (
                     <div
                       key={n}
-                      className={cx(
-                        'flex flex-wrap items-baseline gap-2 rounded-sm border px-3 py-2 text-sm',
-                        TONO_NIVEL[NIVELES[n].tono],
-                      )}
+                      className="tarjeta flex flex-wrap items-baseline gap-2 px-3 py-2 text-sm"
                     >
                       <b className="font-bold">{NIVELES[n].rotulo}</b>
-                      <span className="min-w-0 flex-1">{NIVELES[n].regla}</span>
+                      <span className="min-w-0 flex-1 text-ink-2">{NIVELES[n].regla}</span>
                     </div>
                   ))}
                 </div>
-              </div>
+              </PanelPlegable>
             </div>
 
             {/* La aduana de destino tiene su propio trámite por embarque */}
@@ -421,7 +410,9 @@ export default function Torre() {
                         <span className="text-sm text-ink-3">
                           {e.oc.proveedor} · {e.ruta.frontera} · ETA {fmtFechaCorta(e.planta)}
                           {e.delay > 0 && (
-                            <b className={cx('num font-bold', tono.texto)}> · +{e.delay} d</b>
+                            <b className={cx('num font-bold', e.riesgo === 'En riesgo' ? 'text-navy-700' : tono.texto)}>
+                              {' '}· +{e.delay} d
+                            </b>
                           )}
                         </span>
                         <div className="ml-auto flex items-center gap-2">
@@ -513,17 +504,14 @@ export default function Torre() {
               {alertasFiltradas.map((a) => (
                 <div
                   key={a.clave}
-                  className={cx(
-                    'flex flex-wrap items-start gap-2.5 rounded-sm border px-3 py-2.5 text-sm',
-                    TONO_NIVEL[NIVELES[a.nivel].tono],
-                  )}
+                  className="tarjeta flex flex-wrap items-start gap-2.5 px-3 py-2.5 text-sm"
                 >
                   <LuTriangleAlert size={15} className="mt-px shrink-0" />
                   <span className="min-w-0 flex-1">
                     <b className="font-bold">
                       {NIVELES[a.nivel].rotulo} · {a.embarque.id}
                     </b>
-                    <span className="block">{a.texto}</span>
+                    <span className="block text-ink-2">{a.texto}</span>
                   </span>
                   <Button size="sm" onClick={() => setDetalle(a.embarque)}>
                     Ver embarque
@@ -574,7 +562,7 @@ export default function Torre() {
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap gap-3">
               <Kpi rotulo="Segmento actual" valor={detalle.segmento} />
-              <Kpi rotulo="Días de desviación" valor={`${detalle.delay} d`} alerta={detalle.delay > 0} />
+              <Kpi rotulo="Días de desviación" valor={`${detalle.delay} d`} />
               <Kpi rotulo="Cantidad" valor={`${fmtNum(detalle.despacho.cantidad)} ${detalle.material?.unidad}`} />
             </div>
 

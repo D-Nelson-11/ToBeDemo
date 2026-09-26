@@ -21,6 +21,7 @@ import {
   LuWorkflow,
   LuX,
 } from 'react-icons/lu'
+import logoVesta from '../assets/logo-vesta.png'
 import { useOc } from '../data/store'
 import { cx } from './ui/Button'
 
@@ -289,21 +290,27 @@ export default function Shell() {
           plegado ? 'w-14' : 'w-[242px]',
         )}
       >
-        <div className="flex h-14 items-center gap-2 border-b border-white/15 px-3">
-          <span
+        {/* Sin borde abajo: con él, la línea del header se veía cruzar al sidebar. */}
+        <div className="relative shrink-0 px-3 pb-3 pt-5">
+          <img
+            src={logoVesta}
+            alt="Vesta"
+            width={280}
+            height={289}
             className={cx(
-              'min-w-0 flex-1 overflow-hidden whitespace-nowrap text-lg font-bold',
-              'transition-opacity duration-150 ease-[var(--ease-out-soft)]',
-              plegado && 'pointer-events-none opacity-0',
+              'mx-auto block h-auto transition-[width] duration-200 ease-[var(--ease-out-soft)] motion-reduce:transition-none',
+              plegado ? 'w-8' : 'w-[76px]',
             )}
-          >
-            Vesta
-          </span>
+          />
+          {/* Plegado no cabe al lado del logo: baja centrado debajo. */}
           <button
             onClick={() => setPlegado((v) => !v)}
             title={plegado ? 'Expandir menú' : 'Plegar menú'}
             aria-label={plegado ? 'Expandir menú' : 'Plegar menú'}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm text-white/80 transition-colors duration-100 hover:bg-white/15 hover:text-white"
+            className={cx(
+              'flex h-8 w-8 items-center justify-center rounded-sm text-white/60 transition-colors duration-100 hover:bg-white/15 hover:text-white',
+              plegado ? 'mx-auto mt-3' : 'absolute right-2 top-2',
+            )}
           >
             {plegado ? <LuPanelLeftOpen size={16} /> : <LuPanelLeftClose size={16} />}
           </button>
@@ -328,7 +335,7 @@ export default function Shell() {
                     'relative flex items-center gap-2.5 rounded-sm px-2.5 py-2.5 no-underline transition-colors duration-100',
                     activo ? 'bg-white/18 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white',
                     activo &&
-                      'before:absolute before:-left-2 before:inset-y-1.5 before:w-[3px] before:rounded-r-sm before:bg-rojo-600',
+                      'before:absolute before:-left-2 before:inset-y-1.5 before:w-[3px] before:rounded-r-sm before:bg-white',
                   )}
                 >
                   <Icono size={17} strokeWidth={1.9} className="shrink-0" />

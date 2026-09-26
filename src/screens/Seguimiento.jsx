@@ -9,6 +9,7 @@ import {
   LuTriangleAlert,
 } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
+import PanelPlegable from '../components/ui/PanelPlegable'
 import { Input, Select } from '../components/ui/Field'
 import ModalActualizarFechas from './ModalActualizarFechas'
 import { useOc } from '../data/store'
@@ -314,114 +315,116 @@ export default function Seguimiento() {
           )}
 
           {/* --- tabla de programación --- */}
-          <div className="panel tabla-scroll">
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th className="w-9">
-                    <input
-                      type="checkbox"
-                      className="chk"
-                      aria-label="Seleccionar todos"
-                      checked={todosMarcados}
-                      ref={(el) => {
-                        if (el)
-                          el.indeterminate =
-                            filasMarcadas.length > 0 && filasMarcadas.length < marcables.length
-                      }}
-                      onChange={(e) => alternarTodos(e.target.checked)}
-                    />
-                  </th>
-                  <th className="w-[104px]">OC</th>
-                  <th className="w-[92px]">Despacho</th>
-                  <th className="min-w-[190px]">Cat / SKU</th>
-                  <th className="w-[86px]">Incoterm</th>
-                  <th className="w-[104px]">ETD salida</th>
-                  <th className="w-[110px]">ETA frontera</th>
-                  <th className="w-[104px]">ETA planta</th>
-                  <th className="w-[124px]">Checklist aduana</th>
-                  <th className="w-[132px]">Checklist logístico</th>
-                  <th className="min-w-[210px]">Próxima tarea</th>
-                  <th className="w-[132px]">Alerta</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filas.length === 0 && (
+          <PanelPlegable titulo="Programación de despachos" extra={<span className="num text-xs text-ink-3">{filas.length}</span>}>
+            <div className="tabla-scroll">
+              <table className="tbl">
+                <thead>
                   <tr>
-                    <td colSpan={12} className="h-[148px]! bg-surface text-center">
-                      <span className="inline-flex flex-col items-center gap-[7px]">
-                        <LuShip size={26} strokeWidth={1.5} className="text-navy-200" />
-                        <span className="text-base font-semibold text-ink-2">
-                          Nada que seguir con estos filtros
-                        </span>
-                        <span className="text-sm text-ink-3">
-                          Programá despachos en el paso 2 o limpiá los filtros.
-                        </span>
-                      </span>
-                    </td>
+                    <th className="w-9">
+                      <input
+                        type="checkbox"
+                        className="chk"
+                        aria-label="Seleccionar todos"
+                        checked={todosMarcados}
+                        ref={(el) => {
+                          if (el)
+                            el.indeterminate =
+                              filasMarcadas.length > 0 && filasMarcadas.length < marcables.length
+                        }}
+                        onChange={(e) => alternarTodos(e.target.checked)}
+                      />
+                    </th>
+                    <th className="w-[104px]">OC</th>
+                    <th className="w-[92px]">Despacho</th>
+                    <th className="min-w-[190px]">Cat / SKU</th>
+                    <th className="w-[86px]">Incoterm</th>
+                    <th className="w-[104px]">ETD salida</th>
+                    <th className="w-[110px]">ETA frontera</th>
+                    <th className="w-[104px]">ETA planta</th>
+                    <th className="w-[124px]">Checklist aduana</th>
+                    <th className="w-[132px]">Checklist logístico</th>
+                    <th className="min-w-[210px]">Próxima tarea</th>
+                    <th className="w-[132px]">Alerta</th>
                   </tr>
-                )}
-
-                {filas.map((f) => {
-                  const sel = actual?.clave === f.clave
-                  const tono = TONOS[f.alerta.tono]
-                  const vencido = f.alerta.tono === 'rojo'
-                  return (
-                    <tr
-                      key={f.clave}
-                      onClick={() => setSeleccion(f.clave)}
-                      style={{ '--spine': tono.lomo }}
-                      className={cx('cursor-pointer', sel && '[&>td]:bg-navy-50!')}
-                    >
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          className="chk"
-                          aria-label={`Seleccionar ${f.oc.id} ${f.despacho?.id ?? ''}`}
-                          checked={marcados.has(f.clave)}
-                          onChange={() => alternar(f.clave)}
-                        />
-                      </td>
-                      <td className="cell-key">{f.oc.id}</td>
-                      <td className="cell-strong">{f.despacho.id}</td>
-                      <td className="cell-cut" title={f.material?.nombre}>
-                        <span className="text-ink-3">{f.material?.codigo}</span> · {f.material?.nombre}
-                      </td>
-                      <td>{f.oc.incoterm}</td>
-                      <td className={cx('num', vencido && 'font-bold text-rojo-700')}>
-                        {f.etd ? fmtFechaCorta(f.etd) : '—'}
-                      </td>
-                      <td className="num">{f.frontera ? fmtFechaCorta(f.frontera) : '—'}</td>
-                      <td className="num">{f.planta ? fmtFechaCorta(f.planta) : '—'}</td>
-                      <td>
-                        <Avance marcas={f.despacho.aduana} tono={f.alerta.tono} />
-                      </td>
-                      <td>
-                        <Avance marcas={f.despacho.logistica} tono={f.alerta.tono} />
-                      </td>
-                      <td className="cell-cut" title={f.tarea}>
-                        {f.tarea}
-                        {f.etd && (
-                          <span className="ml-1.5 text-xs text-ink-4">· {desdeHoy(f.etd)}</span>
-                        )}
-                      </td>
-                      <td>
-                        <span
-                          className={cx(
-                            'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-[3px] text-xs font-semibold',
-                            tono.chip,
-                          )}
-                        >
-                          {vencido && <LuTriangleAlert size={11} />}
-                          {f.alerta.texto}
+                </thead>
+                <tbody>
+                  {filas.length === 0 && (
+                    <tr>
+                      <td colSpan={12} className="h-[148px]! bg-surface text-center">
+                        <span className="inline-flex flex-col items-center gap-[7px]">
+                          <LuShip size={26} strokeWidth={1.5} className="text-navy-200" />
+                          <span className="text-base font-semibold text-ink-2">
+                            Nada que seguir con estos filtros
+                          </span>
+                          <span className="text-sm text-ink-3">
+                            Programá despachos en el paso 2 o limpiá los filtros.
+                          </span>
                         </span>
                       </td>
                     </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                  )}
+
+                  {filas.map((f) => {
+                    const sel = actual?.clave === f.clave
+                    const tono = TONOS[f.alerta.tono]
+                    const vencido = f.alerta.tono === 'rojo'
+                    return (
+                      <tr
+                        key={f.clave}
+                        onClick={() => setSeleccion(f.clave)}
+                        style={{ '--spine': tono.lomo }}
+                        className={cx('cursor-pointer', sel && '[&>td]:bg-navy-50!')}
+                      >
+                        <td onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            className="chk"
+                            aria-label={`Seleccionar ${f.oc.id} ${f.despacho?.id ?? ''}`}
+                            checked={marcados.has(f.clave)}
+                            onChange={() => alternar(f.clave)}
+                          />
+                        </td>
+                        <td className="cell-key">{f.oc.id}</td>
+                        <td className="cell-strong">{f.despacho.id}</td>
+                        <td className="cell-cut" title={f.material?.nombre}>
+                          <span className="text-ink-3">{f.material?.codigo}</span> · {f.material?.nombre}
+                        </td>
+                        <td>{f.oc.incoterm}</td>
+                        <td className={cx('num', vencido && 'font-bold text-rojo-700')}>
+                          {f.etd ? fmtFechaCorta(f.etd) : '—'}
+                        </td>
+                        <td className="num">{f.frontera ? fmtFechaCorta(f.frontera) : '—'}</td>
+                        <td className="num">{f.planta ? fmtFechaCorta(f.planta) : '—'}</td>
+                        <td>
+                          <Avance marcas={f.despacho.aduana} tono={f.alerta.tono} />
+                        </td>
+                        <td>
+                          <Avance marcas={f.despacho.logistica} tono={f.alerta.tono} />
+                        </td>
+                        <td className="cell-cut" title={f.tarea}>
+                          {f.tarea}
+                          {f.etd && (
+                            <span className="ml-1.5 text-xs text-ink-4">· {desdeHoy(f.etd)}</span>
+                          )}
+                        </td>
+                        <td>
+                          <span
+                            className={cx(
+                              'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-[3px] text-xs font-semibold',
+                              tono.chip,
+                            )}
+                          >
+                            {vencido && <LuTriangleAlert size={11} />}
+                            {f.alerta.texto}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </PanelPlegable>
 
           {/* --- detalle del despacho seleccionado --- */}
           {actual && (

@@ -14,19 +14,19 @@ export const PRIORIDADES = ['Crítico', 'Seguimiento Proactivo', 'Normal']
 // Semáforo de exposición. Son colores de estado, reservados: nunca se reusan
 // para pintar una serie más de un gráfico.
 export const TONO_PRIORIDAD = {
-  Crítico: { chip: 'bg-rojo-50 text-rojo-700', lomo: 'var(--color-rojo-600)', borde: 'border-rojo-100 bg-rojo-50' },
-  'Seguimiento Proactivo': { chip: 'bg-ambar-50 text-ambar-700', lomo: 'var(--color-ambar-500)', borde: 'border-ambar-100 bg-ambar-50' },
-  Normal: { chip: 'bg-teal-50 text-teal-700', lomo: 'var(--color-teal-600)', borde: 'border-teal-100 bg-teal-50' },
+  Crítico: { chip: 'bg-rojo-50 text-rojo-700', lomo: 'var(--color-rojo-600)' },
+  'Seguimiento Proactivo': { chip: 'bg-ambar-50 text-ambar-700', lomo: 'var(--color-ambar-500)' },
+  Normal: { chip: 'bg-teal-50 text-teal-700', lomo: 'var(--color-teal-600)' },
 }
 
 // Las cuatro que NO son flete contratado: son las que no deberían existir.
 export const CATEGORIAS_EXTRA = ['Demora', 'Estadías', 'Chasis', 'WTD']
 
-// Las dos series del gráfico de tendencia. Par validado (luminosidad, croma,
-// separación para daltonismo y contraste sobre el panel blanco).
+// Las dos series del gráfico de tendencia: azul oscuro y claro, y la segunda
+// además va punteada (LineasMulti), así se distinguen sin depender del tono.
 export const SERIES_COSTO = [
-  { id: 'total', rotulo: 'Costo total', color: '#1f6fb2' },
-  { id: 'extra', rotulo: 'Extraordinario', color: '#b87400' },
+  { id: 'total', rotulo: 'Costo total', color: '#003049' },
+  { id: 'extra', rotulo: 'Extraordinario', color: '#5b9bd5' },
 ]
 
 // El ahorro que el mockup estima sobre el costo extraordinario.

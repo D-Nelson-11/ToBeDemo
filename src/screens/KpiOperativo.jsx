@@ -13,8 +13,9 @@ import {
   LuTrafficCone,
 } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
+import PanelPlegable from '../components/ui/PanelPlegable'
 import { Select } from '../components/ui/Field'
-import { LineasMulti, Reparto } from '../components/ui/Graficos'
+import { LineasMulti, Reparto, TONO_MAGNITUD } from '../components/ui/Graficos'
 import { Kpi } from '../components/ui/Valores'
 import { useOc } from '../data/store'
 import {
@@ -61,8 +62,6 @@ const VISTAS = [
 
 const d1 = (v) => fmtNum(v, 1)
 
-// El semáforo de cumplimiento es el del mockup: 95 y 90 son los dos cortes.
-const tonoPct = (v) => (v >= 95 ? 'bg-teal-600' : v >= 90 ? 'bg-ambar-500' : 'bg-rojo-600')
 const TONO_SCORE = {
   5: 'bg-teal-50 text-teal-700',
   4: 'bg-teal-50 text-teal-700',
@@ -111,8 +110,8 @@ function BarraPct({ rotulo, detalle, valor }) {
       </div>
       <span className="mt-1 block h-2 w-full overflow-hidden rounded-full bg-surface-3">
         <span
-          className={cx('block h-full rounded-full', tonoPct(valor))}
-          style={{ width: `${Math.min(100, valor)}%` }}
+          className="block h-full rounded-full"
+          style={{ width: `${Math.min(100, valor)}%`, background: TONO_MAGNITUD }}
         />
       </span>
     </div>
@@ -233,11 +232,11 @@ export default function KpiOperativo() {
       {vista === 'resumen' && (
         <>
           <div className="flex flex-wrap gap-2">
-            <Kpi rotulo="Cumplimiento proveedor" valor={`${r.proveedor}%`} tono="border-navy-100 bg-navy-50" />
+            <Kpi rotulo="Cumplimiento proveedor" valor={`${r.proveedor}%`} />
             <Kpi rotulo="Fiabilidad tránsito" valor={`${r.transito}%`} />
             <Kpi rotulo="Cumplimiento aduana" valor={`${r.aduana}%`} />
             <Kpi rotulo="Desviación tránsito" valor={`${d1(r.desviacion)} d`} />
-            <Kpi rotulo="Embarques" valor={r.embarques} tono="border-teal-100 bg-teal-50" />
+            <Kpi rotulo="Embarques" valor={r.embarques} />
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -303,7 +302,7 @@ export default function KpiOperativo() {
       {vista === 'proveedores' && (
         <>
           <div className="flex flex-wrap gap-2">
-            <Kpi rotulo="Cumplimiento total" valor={`${r.proveedor}%`} tono="border-navy-100 bg-navy-50" />
+            <Kpi rotulo="Cumplimiento total" valor={`${r.proveedor}%`} />
             <Kpi
               rotulo="Score promedio"
               valor={proveedores.length ? `${d1(proveedores.reduce((a, p) => a + score(p.cumplimiento), 0) / proveedores.length)}/5` : '—'}
@@ -312,7 +311,6 @@ export default function KpiOperativo() {
             <Kpi
               rotulo="Bajo objetivo"
               valor={proveedores.filter((p) => p.cumplimiento < 90).length}
-              tono="border-rojo-100 bg-rojo-50"
             />
             <Kpi rotulo="Embarques" valor={r.embarques} />
           </div>
@@ -367,12 +365,11 @@ export default function KpiOperativo() {
       {vista === 'transito' && (
         <>
           <div className="flex flex-wrap gap-2">
-            <Kpi rotulo="Fiabilidad total" valor={`${r.transito}%`} tono="border-navy-100 bg-navy-50" />
+            <Kpi rotulo="Fiabilidad total" valor={`${r.transito}%`} />
             <Kpi rotulo="Desviación media" valor={`${d1(r.desviacion)} d`} />
             <Kpi
               rotulo="Rutas críticas"
               valor={origenes.filter((o) => o.riesgo > 10).length}
-              tono="border-rojo-100 bg-rojo-50"
             />
             <Kpi rotulo="Naviera líder" valor={navieras[0]?.clave ?? '—'} />
             <Kpi rotulo="Embarques" valor={r.embarques} />
@@ -438,9 +435,9 @@ export default function KpiOperativo() {
       {vista === 'aduana' && (
         <>
           <div className="flex flex-wrap gap-2">
-            <Kpi rotulo="Cumplimiento SLA" valor={`${r.aduana}%`} tono="border-navy-100 bg-navy-50" />
+            <Kpi rotulo="Cumplimiento SLA" valor={`${r.aduana}%`} />
             <Kpi rotulo="Tiempo promedio" valor={`${d1(r.diasAduana)} d`} />
-            <Kpi rotulo="Casos fuera de SLA" valor={r.fueraDeSla} tono="border-rojo-100 bg-rojo-50" />
+            <Kpi rotulo="Casos fuera de SLA" valor={r.fueraDeSla} />
             <Kpi rotulo="Aduana crítica" valor={aduanas[0]?.clave ?? '—'} />
             <Kpi rotulo="Operaciones" valor={r.embarques} />
           </div>
@@ -506,8 +503,8 @@ export default function KpiOperativo() {
             {selectivos.map((s) => (
               <Kpi key={s.clave} rotulo={`Selectivo ${s.clave.toLowerCase()}`} valor={`${s.participacion}%`} />
             ))}
-            <Kpi rotulo="Liberación promedio" valor={`${d1(r.diasAduana)} d`} tono="border-navy-100 bg-navy-50" />
-            <Kpi rotulo="Fuera de SLA" valor={r.fueraDeSla} tono="border-rojo-100 bg-rojo-50" />
+            <Kpi rotulo="Liberación promedio" valor={`${d1(r.diasAduana)} d`} />
+            <Kpi rotulo="Fuera de SLA" valor={r.fueraDeSla} />
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -623,7 +620,7 @@ export default function KpiOperativo() {
       {vista === 'pais' && (
         <>
           <div className="flex flex-wrap gap-2">
-            <Kpi rotulo="Mejor aduana" valor={conDatos[0]?.clave ?? '—'} tono="border-teal-100 bg-teal-50" />
+            <Kpi rotulo="Mejor aduana" valor={conDatos[0]?.clave ?? '—'} />
             <Kpi rotulo="Mayor tiempo" valor={masLenta ? `${d1(masLenta.dias)} d` : '—'} />
             <Kpi
               rotulo={`Cumplimiento SLA ${SLA_ADUANA} d`}
@@ -679,7 +676,6 @@ export default function KpiOperativo() {
             <Kpi
               rotulo="Gap"
               valor={cmp ? (cmp.porCasos ? `${Math.round(cmp.gap)} pp` : `${cmp.gap >= 0 ? '+' : ''}${d1(cmp.gap)} d`) : '—'}
-              tono={cmp?.desviado ? 'border-rojo-100 bg-rojo-50' : 'border-teal-100 bg-teal-50'}
             />
           </div>
 
@@ -703,7 +699,7 @@ export default function KpiOperativo() {
                       valor={cmp.porCasos ? cmp.ratio : cmp.real}
                       tope={cmp.porCasos ? 100 : Math.max(cmp.plan, cmp.real, 1)}
                       detalle={cmp.porCasos ? `${cmp.real} cumplidos` : cmp.rotuloReal}
-                      color={cmp.desviado ? '#c0453f' : '#2b8f5e'}
+                      color={cmp.desviado ? '#003049' : '#5b9bd5'}
                     />
                   </Lista>
 
@@ -724,53 +720,62 @@ export default function KpiOperativo() {
                     datos={cmp.serie}
                     series={[
                       { id: 'plan', rotulo: cmp.rotuloPlan, color: '#17587a' },
-                      { id: 'real', rotulo: cmp.rotuloReal, color: '#c0453f' },
+                      { id: 'real', rotulo: cmp.rotuloReal, color: '#5b9bd5' },
                     ]}
                     fmt={d1}
                   />
                 </Panel>
 
-                <Panel titulo="Embarques afectados" etiqueta={`${cmp.afectados.length} casos`}>
-                  {cmp.afectados.length ? (
-                    <div className="tabla-scroll">
-                      <table className="tbl">
-                        <thead>
-                          <tr>
-                            <th className="w-[120px]">Embarque</th>
-                            <th>Proveedor</th>
-                            <th>Naviera</th>
-                            <th>Aduana</th>
-                            <th className="w-[110px]">Selectivo</th>
-                            <th className="w-[110px] text-right!">Días</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {cmp.afectados.map((e) => (
-                            <tr key={e.id}>
-                              <td className="cell-key">{e.id}</td>
-                              <td>{e.proveedor}</td>
-                              <td>{e.naviera}</td>
-                              <td>{e.aduana}</td>
-                              <td>
-                                <span
-                                  className="inline-block rounded-full px-2.5 py-[3px] text-xs font-semibold text-white"
-                                  style={{ background: COLOR_SELECTIVO[e.selectivo] }}
-                                >
-                                  {e.selectivo}
-                                </span>
-                              </td>
-                              <td className="cell-num">{e.dias} d</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <span className="block py-6 text-center text-sm text-ink-3">
-                      No hay embarques afectados con este criterio.
+                <PanelPlegable
+                  titulo="Embarques afectados"
+                  extra={
+                    <span className="rounded-full bg-navy-50 px-2.5 py-[3px] text-xs font-bold text-navy-700">
+                      {cmp.afectados.length} casos
                     </span>
-                  )}
-                </Panel>
+                  }
+                >
+                  <div className="p-4">
+                    {cmp.afectados.length ? (
+                      <div className="tabla-scroll">
+                        <table className="tbl">
+                          <thead>
+                            <tr>
+                              <th className="w-[120px]">Embarque</th>
+                              <th>Proveedor</th>
+                              <th>Naviera</th>
+                              <th>Aduana</th>
+                              <th className="w-[110px]">Selectivo</th>
+                              <th className="w-[110px] text-right!">Días</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {cmp.afectados.map((e) => (
+                              <tr key={e.id}>
+                                <td className="cell-key">{e.id}</td>
+                                <td>{e.proveedor}</td>
+                                <td>{e.naviera}</td>
+                                <td>{e.aduana}</td>
+                                <td>
+                                  <span
+                                    className="inline-block rounded-full px-2.5 py-[3px] text-xs font-semibold text-white"
+                                    style={{ background: COLOR_SELECTIVO[e.selectivo] }}
+                                  >
+                                    {e.selectivo}
+                                  </span>
+                                </td>
+                                <td className="cell-num">{e.dias} d</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <span className="block py-6 text-center text-sm text-ink-3">
+                        No hay embarques afectados con este criterio.
+                      </span>
+                    )}
+                  </div>
+                </PanelPlegable>
               </div>
 
               <Panel titulo="Gestión operativa" etiqueta="Acción">

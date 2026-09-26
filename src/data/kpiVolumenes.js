@@ -23,15 +23,14 @@ export const NAVIERAS_KPI = ['Maersk', 'MSC', 'CMA CGM', 'Hapag-Lloyd', 'Great W
 
 export const TIPOS_PRODUCTO = ['Materia prima', 'Empaque']
 
-// Paleta categórica de modalidades. El ORDEN se validó por pares adyacentes
-// (luminosidad, croma, separación para daltonismo y contraste sobre el panel
-// blanco). Reordenar o cambiar un tono obliga a validarla de nuevo.
+// Azules de AZULES (Graficos.jsx), alternando oscuro/claro: si dos vecinos
+// quedan del mismo tono ya no se distinguen en el Reparto.
 export const MODALIDAD_COLOR = {
-  Marítimo: '#1f6fb2',
-  Aéreo: '#b87400',
-  Terrestre: '#00897b',
-  LCL: '#c1502e',
-  FTL: '#7b5ea7',
+  Marítimo: '#003049',
+  Aéreo: '#5b9bd5',
+  Terrestre: '#1f5f8b',
+  LCL: '#a9c9e6',
+  FTL: '#3d85c6',
 }
 
 // Kg y unidades no se suman entre sí: cada SKU se mide en una de las dos.

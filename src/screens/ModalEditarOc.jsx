@@ -114,7 +114,7 @@ export default function ModalEditarOc({ oc, onClose }) {
     >
       <div className="flex flex-col gap-5">
         {!oc.activa && (
-          <div className="flex items-center gap-2.5 rounded-md border border-ambar-100 bg-ambar-50 px-3 py-2.5 text-sm font-medium text-ambar-700">
+          <div className="flex items-center gap-2.5 tarjeta px-3 py-2.5 text-sm font-medium">
             <LuBan size={15} className="shrink-0" />
             <span className="flex-1">
               Esta OC está inactiva: no aparece en la operación ni admite despachos.

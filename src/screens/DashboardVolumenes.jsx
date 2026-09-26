@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { LuContainer, LuFileDown, LuPrinter } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
+import PanelPlegable from '../components/ui/PanelPlegable'
 import { Select } from '../components/ui/Field'
 import { Kpi } from '../components/ui/Valores'
 import { useOc } from '../data/store'
@@ -104,7 +105,7 @@ export default function DashboardVolumenes() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Kpi rotulo="Volumen ingresado" valor={tm(r.tm)} tono="border-navy-100 bg-navy-50" />
+        <Kpi rotulo="Volumen ingresado" valor={tm(r.tm)} />
         <Kpi rotulo="Contenedores" valor={fmtNum(r.contenedores)} />
         <Kpi rotulo="Embarques" valor={fmtNum(r.embarques)} />
         <Kpi rotulo="SKU con movimiento" valor={`${r.skus} / ${SKUS.length}`} />
@@ -112,7 +113,6 @@ export default function DashboardVolumenes() {
         <Kpi
           rotulo="Planta líder"
           valor={r.lider ? PLANTA_ROTULO[r.lider] : '—'}
-          tono="border-teal-100 bg-teal-50"
         />
       </div>
 
@@ -137,13 +137,14 @@ export default function DashboardVolumenes() {
         </Tarjeta>
       </div>
 
-      <div className="panel">
-        <div className="panel-head">
-          <span className="panel-title">Embarques por SKU · cantidad ingresada por planta</span>
-          <span className="num ml-auto text-sm text-ink-3">
+      <PanelPlegable
+        titulo="Embarques por SKU · cantidad ingresada por planta"
+        extra={
+          <span className="num text-sm text-ink-3">
             {tabla.length} SKU · {tm(r.tm)} · {fmtNum(r.contenedores)} contenedores
           </span>
-        </div>
+        }
+      >
         <div className="tabla-scroll">
           <table className="tbl">
             <thead>
@@ -205,7 +206,7 @@ export default function DashboardVolumenes() {
             </tbody>
           </table>
         </div>
-      </div>
+      </PanelPlegable>
     </div>
   )
 }

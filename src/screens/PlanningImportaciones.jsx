@@ -14,6 +14,7 @@ import {
   LuX,
 } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
+import PanelPlegable from '../components/ui/PanelPlegable'
 import Modal from '../components/ui/Modal'
 import { Select } from '../components/ui/Field'
 import { BarrasV } from '../components/ui/Graficos'
@@ -34,11 +35,18 @@ import {
 } from '../lib/planning'
 import { fmtFecha, fmtNum } from '../lib/fechas'
 
+// Las cards de debajo de la tabla miden todas lo mismo; lo que no entra scrollea adentro.
+const CARD_FIJA = 'flex h-[300px] flex-col'
+const CUERPO_FIJO = 'min-h-0 flex-1 overflow-y-auto'
+
 const ICONO_SITUACION = {
   'En tránsito': LuShip,
   'En inventario': LuPackage,
   'En producción': LuCog,
 }
+
+// Los gráficos van en azules: el estado lo dice la leyenda, el tono solo ordena.
+const AZUL_ETA = { critico: '#003049', riesgo: '#3d85c6', ok: '#a9c9e6' }
 
 const TONO_SITUACION = {
   'En tránsito': 'text-navy-700',
@@ -58,12 +66,12 @@ const SECCIONES_INFORME = [
 /** Tarjeta de un panel lateral: título + filas contadas, opcionalmente clicables. */
 function PanelLateral({ titulo, icono: Icono, filas, vacio, onFila, onTitulo, activo }) {
   return (
-    <section className="panel">
+    <section className={cx('panel', CARD_FIJA)}>
       <button
         onClick={onTitulo}
         disabled={!onTitulo}
         className={cx(
-          'panel-head w-full text-left',
+          'panel-head w-full shrink-0 text-left',
           onTitulo && 'transition-colors duration-100 hover:bg-surface-3',
           !onTitulo && 'cursor-default',
         )}
@@ -74,7 +82,7 @@ function PanelLateral({ titulo, icono: Icono, filas, vacio, onFila, onTitulo, ac
         </span>
         {onTitulo && <span className="ml-auto text-xs text-ink-3">ver todo</span>}
       </button>
-      <div className="flex flex-col">
+      <div className={cx('flex flex-col', CUERPO_FIJO)}>
         {filas.length === 0 && <span className="px-3 py-3 text-sm text-ink-3">{vacio}</span>}
         {filas.map((g) => (
           <button
@@ -116,7 +124,7 @@ function Anillo({ criticos, riesgo, ok, centro }) {
       <div
         className="relative h-[130px] w-[130px] shrink-0 rounded-full"
         style={{
-          background: `conic-gradient(var(--color-rojo-600) 0 ${a}%, var(--color-ambar-500) ${a}% ${b}%, var(--color-teal-600) ${b}% 100%)`,
+          background: `conic-gradient(${AZUL_ETA.critico} 0 ${a}%, ${AZUL_ETA.riesgo} ${a}% ${b}%, ${AZUL_ETA.ok} ${b}% 100%)`,
         }}
       >
         <div className="absolute inset-[30px] rounded-full bg-surface" />
@@ -126,15 +134,15 @@ function Anillo({ criticos, riesgo, ok, centro }) {
       </div>
       <div className="flex flex-col gap-1.5 text-sm text-ink-2">
         <span className="flex items-center gap-2">
-          <i className="h-2.5 w-2.5 rounded-full bg-rojo-600" /> Crítico
+          <i className="h-2.5 w-2.5 rounded-full" style={{ background: AZUL_ETA.critico }} /> Crítico
           <b className="num font-bold text-ink">{criticos}</b>
         </span>
         <span className="flex items-center gap-2">
-          <i className="h-2.5 w-2.5 rounded-full bg-ambar-500" /> En riesgo
+          <i className="h-2.5 w-2.5 rounded-full" style={{ background: AZUL_ETA.riesgo }} /> En riesgo
           <b className="num font-bold text-ink">{riesgo}</b>
         </span>
         <span className="flex items-center gap-2">
-          <i className="h-2.5 w-2.5 rounded-full bg-teal-600" /> En cumplimiento
+          <i className="h-2.5 w-2.5 rounded-full" style={{ background: AZUL_ETA.ok }} /> En cumplimiento
           <b className="num font-bold text-ink">{ok}</b>
         </span>
       </div>
@@ -213,29 +221,29 @@ export default function PlanningImportaciones() {
       filas: todas.filter((r) => r.estado === 'critico'),
     })
 
-  const tarjetas = [
-    {
-      rotulo: 'En tránsito',
-      Icono: LuShip,
-      tono: 'border-navy-100 bg-navy-50',
-      valor: situacion ? `${fmtNum(situacion.transito)} ${situacion.uom}` : 'Elegí un SKU',
-      detalle: situacion ? situacion.plantas.join(', ') : 'La información aparece al elegir un SKU',
-    },
-    {
-      rotulo: 'En inventario',
-      Icono: LuPackage,
-      tono: 'border-teal-100 bg-teal-50',
-      valor: situacion ? `${fmtNum(situacion.inventario)} ${situacion.uom}` : 'Elegí un SKU',
-      detalle: situacion ? `${situacion.proxima.cobertura.toFixed(1)} meses de cobertura` : '—',
-    },
-    {
-      rotulo: 'En producción',
-      Icono: LuCog,
-      tono: 'border-ambar-100 bg-ambar-50',
-      valor: situacion ? `${situacion.produccion} planta(s)` : 'Elegí un SKU',
-      detalle: situacion ? `${situacion.sku}` : '—',
-    },
-  ]
+  // Solo existen con un SKU elegido: sin él no hay nada que contar.
+  const tarjetas = situacion
+    ? [
+        {
+          rotulo: 'En tránsito',
+          Icono: LuShip,
+          valor: `${fmtNum(situacion.transito)} ${situacion.uom}`,
+          detalle: situacion.plantas.join(', '),
+        },
+        {
+          rotulo: 'En inventario',
+          Icono: LuPackage,
+          valor: `${fmtNum(situacion.inventario)} ${situacion.uom}`,
+          detalle: `${situacion.proxima.cobertura.toFixed(1)} meses de cobertura`,
+        },
+        {
+          rotulo: 'En producción',
+          Icono: LuCog,
+          valor: `${situacion.produccion} planta(s)`,
+          detalle: situacion.sku,
+        },
+      ]
+    : []
 
   const toggleSeccion = (id) =>
     setSecciones((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
@@ -258,13 +266,6 @@ export default function PlanningImportaciones() {
             <LuPrinter size={14} /> Imprimir indicadores
           </Button>
         </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <Kpi rotulo="Importaciones monitoreadas" valor={kpi.total} />
-        <Kpi rotulo="ETA críticas" valor={kpi.criticas} tono="border-rojo-100 bg-rojo-50" />
-        <Kpi rotulo="En riesgo" valor={kpi.riesgo} tono="border-ambar-100 bg-ambar-50" />
-        <Kpi rotulo="Cumplimiento ETA" valor={`${kpi.cumplimiento}%`} tono="border-teal-100 bg-teal-50" />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -309,269 +310,256 @@ export default function PlanningImportaciones() {
         ))}
       </div>
 
-      {/* Las tres tarjetas de situación: con un SKU elegido traen su detalle */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {tarjetas.map(({ rotulo, Icono, valor, detalle, tono }) => (
-          <div key={rotulo} className={cx('rounded-sm border p-3', tono)}>
-            <span className="flex items-center gap-1.5 text-sm font-bold text-ink-2">
-              <Icono size={14} />
-              {rotulo}
-            </span>
-            <b className="num mt-1 block text-2xl font-bold text-navy-800">{valor}</b>
-            <span className="block text-sm text-ink-3">{detalle}</span>
-          </div>
+      {/* KG y unidades no se suman entre sí: cada una es su propio KPI */}
+      <div className="flex flex-wrap gap-2">
+        <Kpi rotulo="Importaciones monitoreadas" valor={kpi.total} />
+        <Kpi rotulo="ETA críticas" valor={kpi.criticas} />
+        <Kpi rotulo="En riesgo" valor={kpi.riesgo} />
+        <Kpi rotulo="Cumplimiento ETA" valor={`${kpi.cumplimiento}%`} />
+        {uoms.map((t) => (
+          <Kpi
+            key={t.uom}
+            rotulo={`Inventario ${t.uom}`}
+            valor={fmtNum(t.inventario)}
+            pie={`${fmtNum(t.transito)} en tránsito · ${t.skus} SKU`}
+          />
         ))}
       </div>
 
-      <div className="panel">
-        <div className="panel-head">
-          <span className="panel-title">Total por unidad de medida</span>
-          <span className="text-sm text-ink-3">KG y unidades se totalizan por separado</span>
-        </div>
-        <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2">
-          {uoms.length === 0 && <span className="text-sm text-ink-3">Sin filas con estos filtros.</span>}
-          {uoms.map((t) => (
-            <div key={t.uom} className="rounded-sm border border-line bg-surface-2 p-3">
-              <div className="lbl mb-2">
-                {t.uom}
-                <span className="font-medium text-ink-3">· {t.skus} SKU</span>
-              </div>
-              <div className="flex flex-wrap gap-x-6 gap-y-1">
-                <span className="text-sm text-ink-2">
-                  Inventario <b className="num font-bold text-navy-800">{fmtNum(t.inventario)}</b>
-                </span>
-                <span className="text-sm text-ink-2">
-                  En tránsito <b className="num font-bold text-navy-800">{fmtNum(t.transito)}</b>
-                </span>
-              </div>
+      {tarjetas.length > 0 && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {tarjetas.map(({ rotulo, Icono, valor, detalle }) => (
+            <div key={rotulo} className="rounded-lg border border-line-soft bg-surface p-4 shadow-tarjeta">
+              <span className="flex items-center gap-1.5 text-sm font-bold text-navy-700">
+                <Icono size={14} />
+                {rotulo}
+              </span>
+              <b className="num mt-1 block text-2xl font-bold text-navy-800">{valor}</b>
+              <span className="block text-sm text-ink-3">{detalle}</span>
             </div>
           ))}
         </div>
+      )}
+
+      <PanelPlegable
+        titulo="ETA por SKU y planta"
+        extra={
+          <span className="num text-sm text-ink-3">
+            {tabla.length} de {todas.length}
+          </span>
+        }
+      >
+        {contexto && (
+          <div className="flex items-center gap-2 border-b border-line bg-navy-50 px-4 py-2 text-sm text-navy-800">
+            <LuFilter size={13} className="shrink-0" />
+            <span className="min-w-0 flex-1">
+              {contexto.rotulo} · {contexto.filas.length} SKU relacionados
+            </span>
+            <button
+              onClick={() => setContexto(null)}
+              aria-label="Quitar selección"
+              className="flex h-6 w-6 items-center justify-center rounded-sm text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink"
+            >
+              <LuX size={13} />
+            </button>
+          </div>
+        )}
+
+        <div className="tabla-scroll">
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th className="w-[110px]">SKU</th>
+                <th className="w-[150px]">Planta</th>
+                <th className="w-[120px] text-right!">Inventario</th>
+                {SEMANAS.map((w) => (
+                  <th key={w} className="w-[80px] text-right!">
+                    {w}
+                  </th>
+                ))}
+                <th className="w-[120px] text-right!">En tránsito</th>
+                <th className="w-[130px]">ETA</th>
+                <th className="w-[110px]">Variación</th>
+                <th className="w-[140px]">Estado ETA</th>
+                <th className="w-[150px]">Situación</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tabla.length === 0 && (
+                <tr>
+                  <td colSpan={11} className="h-[140px]! bg-surface text-center text-sm text-ink-3">
+                    {contexto ? 'No hay SKU relacionados.' : 'Ninguna importación con estos filtros.'}
+                  </td>
+                </tr>
+              )}
+              {tabla.map((r) => {
+                const tono = ESTADOS_ETA[r.estado]
+                const IconoSit = ICONO_SITUACION[r.situacion]
+                return (
+                  <tr key={r.clave} style={{ '--spine': tono.lomo }}>
+                    <td className="cell-key">{r.sku}</td>
+                    <td className="cell-cut" title={r.planta}>
+                      {r.planta}
+                    </td>
+                    <td className="cell-num">
+                      <b className="font-semibold text-ink">{fmtNum(r.inventario)}</b> {r.uom}
+                    </td>
+                    {desgloseSemanal(r).map((s) => (
+                      <td key={s.label} className="cell-num">
+                        <span
+                          className={cx(
+                            'num',
+                            s.alerta
+                              ? 'rounded-xs bg-rojo-50 px-1.5 font-bold text-rojo-700'
+                              : 'font-medium text-ink-2',
+                          )}
+                        >
+                          {fmtNum(s.valor)}
+                        </span>
+                      </td>
+                    ))}
+                    <td className="cell-num">
+                      {r.transito > 0 ? (
+                        <>
+                          <b className="font-semibold text-ink">{fmtNum(r.transito)}</b> {r.uom}
+                        </>
+                      ) : (
+                        <span className="text-ink-4">—</span>
+                      )}
+                    </td>
+                    <td className="num cell-strong">{fmtFecha(r.fecha)}</td>
+                    <td className="num">{r.variacion}</td>
+                    <td>
+                      <span
+                        className={cx(
+                          'inline-block whitespace-nowrap rounded-full px-2.5 py-[3px] text-xs font-semibold',
+                          tono.chip,
+                        )}
+                      >
+                        {tono.rotulo}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={cx('flex items-center gap-1.5 font-medium', TONO_SITUACION[r.situacion])}>
+                        <IconoSit size={13} className="shrink-0" />
+                        {r.situacion}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div className="border-t border-line px-4 py-2 text-xs text-ink-3">
+          En <b className="text-rojo-700">rojo</b>, la cantidad semanal que no se cubre dentro de la
+          semana.
+        </div>
+      </PanelPlegable>
+
+      <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <PanelLateral
+          titulo="Causas de críticos"
+          icono={LuTriangleAlert}
+          filas={paneles.causas}
+          vacio="Ninguna ETA vencida con estos filtros."
+          onFila={(g) => verCausa(g.clave)}
+          onTitulo={verTodasCausas}
+          activo={contexto?.rotulo.startsWith('Causa') ? contexto.rotulo.replace('Causa de críticos: ', '') : null}
+        />
+        <PanelLateral
+          titulo="Compradores"
+          icono={LuUsers}
+          filas={paneles.compradores}
+          vacio="—"
+          onFila={(g) => verComprador(g.clave)}
+          activo={contexto?.rotulo.startsWith('Comprador') ? contexto.rotulo.replace('Comprador: ', '') : null}
+        />
+        <PanelLateral titulo="Proveedores" icono={LuBuilding2} filas={paneles.proveedores} vacio="—" />
+        <section className={cx('panel', CARD_FIJA)}>
+          <div className="panel-head shrink-0">
+            <span className="panel-title">
+              <LuShip size={14} />
+              Embarques en tránsito
+            </span>
+          </div>
+          <div className={cx('flex flex-col', CUERPO_FIJO)}>
+            {paneles.enTransito.length === 0 && (
+              <span className="px-3 py-3 text-sm text-ink-3">Nada en tránsito con estos filtros.</span>
+            )}
+            {paneles.enTransito.map((r) => (
+              <div key={r.clave} className="border-b border-line-soft px-3 py-2 last:border-b-0">
+                <div className="flex items-baseline gap-2">
+                  <b className="num font-semibold text-ink">{r.sku}</b>
+                  <span className="num ml-auto text-sm text-ink-3">{r.variacion}</span>
+                </div>
+                <span className="block text-sm text-ink-3">
+                  {fmtNum(r.transito)} {r.uom} · {r.planta}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[260px_minmax(0,1fr)]">
-        <div className="flex flex-col gap-3">
-          <PanelLateral
-            titulo="Causas de críticos"
-            icono={LuTriangleAlert}
-            filas={paneles.causas}
-            vacio="Ninguna ETA vencida con estos filtros."
-            onFila={(g) => verCausa(g.clave)}
-            onTitulo={verTodasCausas}
-            activo={contexto?.rotulo.startsWith('Causa') ? contexto.rotulo.replace('Causa de críticos: ', '') : null}
-          />
-          <PanelLateral
-            titulo="Compradores"
-            icono={LuUsers}
-            filas={paneles.compradores}
-            vacio="—"
-            onFila={(g) => verComprador(g.clave)}
-            activo={contexto?.rotulo.startsWith('Comprador') ? contexto.rotulo.replace('Comprador: ', '') : null}
-          />
-          <PanelLateral titulo="Proveedores" icono={LuBuilding2} filas={paneles.proveedores} vacio="—" />
-          <section className="panel">
-            <div className="panel-head">
-              <span className="panel-title">
-                <LuShip size={14} />
-                Embarques en tránsito
-              </span>
-            </div>
-            <div className="flex flex-col">
-              {paneles.enTransito.length === 0 && (
-                <span className="px-3 py-3 text-sm text-ink-3">Nada en tránsito con estos filtros.</span>
-              )}
-              {paneles.enTransito.map((r) => (
-                <div key={r.clave} className="border-b border-line-soft px-3 py-2 last:border-b-0">
-                  <div className="flex items-baseline gap-2">
-                    <b className="num font-semibold text-ink">{r.sku}</b>
-                    <span className="num ml-auto text-sm text-ink-3">{r.variacion}</span>
-                  </div>
-                  <span className="block text-sm text-ink-3">
-                    {fmtNum(r.transito)} {r.uom} · {r.planta}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <div className="panel">
-            <div className="panel-head">
-              <span className="panel-title">ETA por SKU y planta</span>
-              <span className="num ml-auto text-sm text-ink-3">
-                {tabla.length} de {todas.length}
-              </span>
-            </div>
-
-            {contexto && (
-              <div className="flex items-center gap-2 border-b border-line bg-navy-50 px-4 py-2 text-sm text-navy-800">
-                <LuFilter size={13} className="shrink-0" />
-                <span className="min-w-0 flex-1">
-                  {contexto.rotulo} · {contexto.filas.length} SKU relacionados
-                </span>
-                <button
-                  onClick={() => setContexto(null)}
-                  aria-label="Quitar selección"
-                  className="flex h-6 w-6 items-center justify-center rounded-sm text-ink-3 transition-colors hover:bg-surface-3 hover:text-ink"
-                >
-                  <LuX size={13} />
-                </button>
-              </div>
-            )}
-
-            <div className="tabla-scroll">
-              <table className="tbl">
-                <thead>
-                  <tr>
-                    <th className="w-[110px]">SKU</th>
-                    <th className="w-[150px]">Planta</th>
-                    <th className="w-[120px] text-right!">Inventario</th>
-                    {SEMANAS.map((w) => (
-                      <th key={w} className="w-[80px] text-right!">
-                        {w}
-                      </th>
-                    ))}
-                    <th className="w-[120px] text-right!">En tránsito</th>
-                    <th className="w-[130px]">ETA</th>
-                    <th className="w-[110px]">Variación</th>
-                    <th className="w-[140px]">Estado ETA</th>
-                    <th className="w-[150px]">Situación</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tabla.length === 0 && (
-                    <tr>
-                      <td colSpan={11} className="h-[140px]! bg-surface text-center text-sm text-ink-3">
-                        {contexto ? 'No hay SKU relacionados.' : 'Ninguna importación con estos filtros.'}
-                      </td>
-                    </tr>
-                  )}
-                  {tabla.map((r) => {
-                    const tono = ESTADOS_ETA[r.estado]
-                    const IconoSit = ICONO_SITUACION[r.situacion]
-                    return (
-                      <tr key={r.clave} style={{ '--spine': tono.lomo }}>
-                        <td className="cell-key">{r.sku}</td>
-                        <td className="cell-cut" title={r.planta}>
-                          {r.planta}
-                        </td>
-                        <td className="cell-num">
-                          <b className="font-semibold text-ink">{fmtNum(r.inventario)}</b> {r.uom}
-                        </td>
-                        {desgloseSemanal(r).map((s) => (
-                          <td key={s.label} className="cell-num">
-                            <span
-                              className={cx(
-                                'num',
-                                s.alerta
-                                  ? 'rounded-xs bg-rojo-50 px-1.5 font-bold text-rojo-700'
-                                  : 'font-medium text-ink-2',
-                              )}
-                            >
-                              {fmtNum(s.valor)}
-                            </span>
-                          </td>
-                        ))}
-                        <td className="cell-num">
-                          {r.transito > 0 ? (
-                            <>
-                              <b className="font-semibold text-ink">{fmtNum(r.transito)}</b> {r.uom}
-                            </>
-                          ) : (
-                            <span className="text-ink-4">—</span>
-                          )}
-                        </td>
-                        <td className="num cell-strong">{fmtFecha(r.fecha)}</td>
-                        <td className="num">{r.variacion}</td>
-                        <td>
-                          <span
-                            className={cx(
-                              'inline-block whitespace-nowrap rounded-full px-2.5 py-[3px] text-xs font-semibold',
-                              tono.chip,
-                            )}
-                          >
-                            {tono.rotulo}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={cx('flex items-center gap-1.5 font-medium', TONO_SITUACION[r.situacion])}>
-                            <IconoSit size={13} className="shrink-0" />
-                            {r.situacion}
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div className="border-t border-line px-4 py-2 text-xs text-ink-3">
-              En <b className="text-rojo-700">rojo</b>, la cantidad semanal que no se cubre dentro de la
-              semana.
-            </div>
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+        <div className={cx('panel', CARD_FIJA)}>
+          <div className="panel-head shrink-0">
+            <span className="panel-title">
+              <LuFactory size={14} />
+              Estado por planta
+            </span>
           </div>
-
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <div className="panel">
-              <div className="panel-head">
-                <span className="panel-title">
-                  <LuFactory size={14} />
-                  Estado por planta
-                </span>
-              </div>
-              <div className="flex flex-col gap-3 p-4">
-                {plantas.length === 0 && <span className="text-sm text-ink-3">Sin plantas con estos filtros.</span>}
-                {plantas.map((p) => {
-                  const pct = (n) => (p.total ? (n / p.total) * 100 : 0)
-                  return (
-                    <div key={p.clave}>
-                      <div className="flex items-baseline justify-between gap-3 text-sm">
-                        <span className="min-w-0 truncate font-medium text-ink">{p.clave}</span>
-                        <span className="num shrink-0 text-ink-3">
-                          {p.criticos > 0 && <b className="font-bold text-rojo-700">{p.criticos} crít.</b>}
-                          {p.criticos > 0 && ' · '}
-                          {p.total} SKU
-                        </span>
-                      </div>
-                      <span className="mt-1 flex h-1.5 overflow-hidden rounded-full bg-surface-3">
-                        <span className="block bg-rojo-600" style={{ width: `${pct(p.criticos)}%` }} />
-                        <span className="block bg-ambar-500" style={{ width: `${pct(p.riesgo)}%` }} />
-                        <span className="block bg-teal-600" style={{ width: `${pct(p.ok)}%` }} />
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div className="panel">
-              <div className="panel-head">
-                <span className="panel-title">
-                  <LuTriangleAlert size={14} />
-                  Alertas prioritarias
-                </span>
-              </div>
-              <div className="flex flex-col gap-2 p-4">
-                {alertas.length === 0 && (
-                  <p className="text-sm text-ink-3">Ninguna ETA vencida con estos filtros.</p>
-                )}
-                {alertas.map((r) => (
-                  <div
-                    key={r.clave}
-                    className="rounded-sm border border-rojo-100 bg-rojo-50 px-3 py-2 text-sm text-rojo-700"
-                  >
-                    <b className="font-bold">
-                      {r.sku} · {r.planta}
-                    </b>
-                    <span className="block">
-                      ETA {fmtFecha(r.fecha)} — {r.variacion}
-                      {r.causa && `. ${r.causa}`}. Cobertura {r.cobertura.toFixed(1)} meses.
+          <div className={cx('flex flex-col gap-3 p-4', CUERPO_FIJO)}>
+            {plantas.length === 0 && <span className="text-sm text-ink-3">Sin plantas con estos filtros.</span>}
+            {plantas.map((p) => {
+              const pct = (n) => (p.total ? (n / p.total) * 100 : 0)
+              return (
+                <div key={p.clave}>
+                  <div className="flex items-baseline justify-between gap-3 text-sm">
+                    <span className="min-w-0 truncate font-medium text-ink">{p.clave}</span>
+                    <span className="num shrink-0 text-ink-3">
+                      {p.criticos > 0 && <b className="font-bold text-navy-800">{p.criticos} crít.</b>}
+                      {p.criticos > 0 && ' · '}
+                      {p.total} SKU
                     </span>
                   </div>
-                ))}
+                  <span className="mt-1 flex h-1.5 overflow-hidden rounded-full bg-surface-3">
+                    <span className="block" style={{ width: `${pct(p.criticos)}%`, background: AZUL_ETA.critico }} />
+                    <span className="block" style={{ width: `${pct(p.riesgo)}%`, background: AZUL_ETA.riesgo }} />
+                    <span className="block" style={{ width: `${pct(p.ok)}%`, background: AZUL_ETA.ok }} />
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className={cx('panel', CARD_FIJA)}>
+          <div className="panel-head shrink-0">
+            <span className="panel-title">
+              <LuTriangleAlert size={14} />
+              Alertas prioritarias
+            </span>
+          </div>
+          <div className={cx('flex flex-col gap-2 p-4', CUERPO_FIJO)}>
+            {alertas.length === 0 && (
+              <p className="text-sm text-ink-3">Ninguna ETA vencida con estos filtros.</p>
+            )}
+            {alertas.map((r) => (
+              <div
+                key={r.clave}
+                className="tarjeta px-3 py-2 text-sm"
+              >
+                <b className="font-bold">
+                  {r.sku} · {r.planta}
+                </b>
+                <span className="block text-ink-2">
+                  ETA {fmtFecha(r.fecha)} — {r.variacion}
+                  {r.causa && `. ${r.causa}`}. Cobertura {r.cobertura.toFixed(1)} meses.
+                </span>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>

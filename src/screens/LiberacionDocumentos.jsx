@@ -11,6 +11,7 @@ import {
   LuTriangleAlert,
 } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
+import PanelPlegable from '../components/ui/PanelPlegable'
 import { Select, Textarea } from '../components/ui/Field'
 import Modal from '../components/ui/Modal'
 import { Dato, Kpi } from '../components/ui/Valores'
@@ -105,25 +106,22 @@ export default function LiberacionDocumentos({ documentos }) {
         <Kpi
           rotulo="Disponibles para recolectar"
           valor={cuenta((d) => d.estado === 'Liberado')}
-          tono="border-teal-100 bg-teal-50"
         />
         <Kpi
           rotulo="Pendientes de liberación"
           valor={cuenta((d) => d.estado === 'Pendiente')}
-          tono="border-ambar-100 bg-ambar-50"
         />
         <Kpi rotulo="Recolectados" valor={cuenta((d) => d.estado === 'Recolectado')} />
         <Kpi
           rotulo="Alta relevancia sin recolectar"
           valor={cuenta((d) => d.relevancia === 'Alta' && d.estado !== 'Recolectado')}
-          tono="border-rojo-100 bg-rojo-50"
         />
       </div>
 
-      <div className="panel">
-        <div className="panel-head flex-wrap">
-          <span className="panel-title">Documentos por embarque</span>
-          <div className="ml-auto flex flex-wrap items-center gap-2">
+      <PanelPlegable
+        titulo="Documentos por embarque"
+        acciones={
+          <div className="flex flex-wrap items-center gap-2">
             <Select
               placeholder="Todos los estados"
               options={ESTADOS_DOCUMENTO}
@@ -153,8 +151,8 @@ export default function LiberacionDocumentos({ documentos }) {
               </Button>
             )}
           </div>
-        </div>
-
+        }
+      >
         <div className="tabla-scroll">
           <table className="tbl">
             <thead>
@@ -227,7 +225,7 @@ export default function LiberacionDocumentos({ documentos }) {
             </tbody>
           </table>
         </div>
-      </div>
+      </PanelPlegable>
 
       <Modal
         open={!!recolectando}
@@ -270,7 +268,7 @@ export default function LiberacionDocumentos({ documentos }) {
             </div>
 
             {recolectando.relevancia === 'Alta' && (
-              <div className="flex items-start gap-2 rounded-sm border border-rojo-100 bg-rojo-50 px-3 py-2 text-sm text-rojo-700">
+              <div className="flex items-start gap-2 tarjeta px-3 py-2 text-sm">
                 <LuTriangleAlert size={15} className="mt-px shrink-0" />
                 <span>
                   La aduana de destino necesita el original a más tardar el{' '}

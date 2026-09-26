@@ -62,9 +62,7 @@ function Mensaje({ correo }) {
     <div
       className={cx(
         'rounded-sm border p-3',
-        tipo === 'retraso' && 'border-ambar-100 bg-ambar-50/40',
-        (tipo === 'urgencia' || tipo === 'problema') && 'border-rojo-100 bg-rojo-50/40',
-        !tipo && (recibido ? 'border-line bg-surface' : 'border-line bg-surface-2'),
+        tipo || recibido ? 'border-line-soft bg-surface' : 'border-line bg-surface-2',
       )}
     >
       <div className="mb-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-1">

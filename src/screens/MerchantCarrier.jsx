@@ -14,6 +14,7 @@ import {
   LuTruck,
 } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
+import PanelPlegable from '../components/ui/PanelPlegable'
 import { Input, Select } from '../components/ui/Field'
 import Modal from '../components/ui/Modal'
 import { Dato, Kpi } from '../components/ui/Valores'
@@ -249,35 +250,35 @@ export default function MerchantCarrier({ embarques: embarquesProp }) {
   const kpis = {
     pre: [
       ['En pre-coordinación', vistas.precoordinacion.length],
-      ['Trámite sobre 60%', vistas.precoordinacion.filter((f) => f.pct >= 60).length, 'border-teal-100 bg-teal-50'],
-      ['Con costos abiertos', vistas.precoordinacion.filter((f) => f.embarque.delay > 0).length, 'border-rojo-100 bg-rojo-50'],
-      ['Riesgo alto', vistas.precoordinacion.filter((f) => f.riesgo === 'Alto').length, 'border-ambar-100 bg-ambar-50'],
+      ['Trámite sobre 60%', vistas.precoordinacion.filter((f) => f.pct >= 60).length],
+      ['Con costos abiertos', vistas.precoordinacion.filter((f) => f.embarque.delay > 0).length],
+      ['Riesgo alto', vistas.precoordinacion.filter((f) => f.riesgo === 'Alto').length],
     ],
     liberados: [
-      ['Liberados sin coordinar', vistas.liberados.length, 'border-ambar-100 bg-ambar-50'],
-      ['Ya coordinados', vistas.coordinados.length, 'border-teal-100 bg-teal-50'],
-      ['Con costos abiertos', vistas.liberados.filter((f) => f.embarque.delay > 0).length, 'border-rojo-100 bg-rojo-50'],
+      ['Liberados sin coordinar', vistas.liberados.length],
+      ['Ya coordinados', vistas.coordinados.length],
+      ['Con costos abiertos', vistas.liberados.filter((f) => f.embarque.delay > 0).length],
       ['Riesgo alto', vistas.liberados.filter((f) => f.riesgo === 'Alto').length],
     ],
     recibidas: [
-      ['Por revisar', vistas.recibidas.length, 'border-ambar-100 bg-ambar-50'],
+      ['Por revisar', vistas.recibidas.length],
       ['Enviadas a Aduana', vistas.coordinados.filter((f) => f.coordinacion.estado === 'Enviada a Aduana').length],
-      ['Confirmadas', vistas.coordinados.filter((f) => f.coordinacion.estado === 'Confirmado').length, 'border-teal-100 bg-teal-50'],
-      ['Riesgo alto', vistas.recibidas.filter((f) => f.riesgo === 'Alto').length, 'border-rojo-100 bg-rojo-50'],
+      ['Confirmadas', vistas.coordinados.filter((f) => f.coordinacion.estado === 'Confirmado').length],
+      ['Riesgo alto', vistas.recibidas.filter((f) => f.riesgo === 'Alto').length],
     ],
     coordinados: [
-      ['Embarques coordinados', vistas.coordinados.length, 'border-teal-100 bg-teal-50'],
+      ['Embarques coordinados', vistas.coordinados.length],
       ['Transporte asignado', vistas.coordinados.filter((f) => f.estadoTransporte !== 'Por asignar').length],
-      ['Por asignar', vistas.coordinados.filter((f) => f.estadoTransporte === 'Por asignar').length, 'border-ambar-100 bg-ambar-50'],
+      ['Por asignar', vistas.coordinados.filter((f) => f.estadoTransporte === 'Por asignar').length],
       ['En tránsito', vistas.coordinados.filter((f) => f.estadoTransporte === 'En tránsito').length],
-      ['Con riesgo', vistas.coordinados.filter((f) => f.riesgo !== 'Bajo').length, 'border-rojo-100 bg-rojo-50'],
+      ['Con riesgo', vistas.coordinados.filter((f) => f.riesgo !== 'Bajo').length],
     ],
     entregados: [
       ['Embarques entregados', vistas.entregados.length],
-      ['Por finiquitar', vistas.entregados.filter((f) => f.estatus !== 'Finalizado').length, 'border-ambar-100 bg-ambar-50'],
-      ['Con costos excedidos', vistas.entregados.filter((f) => f.costos.length > 0).length, 'border-rojo-100 bg-rojo-50'],
+      ['Por finiquitar', vistas.entregados.filter((f) => f.estatus !== 'Finalizado').length],
+      ['Con costos excedidos', vistas.entregados.filter((f) => f.costos.length > 0).length],
       ['Total en seguimiento', fmtMoneda(vistas.entregados.filter((f) => f.estatus !== 'Finalizado').reduce((a, f) => a + f.total, 0))],
-      ['Finalizados', vistas.entregados.filter((f) => f.estatus === 'Finalizado').length, 'border-teal-100 bg-teal-50'],
+      ['Finalizados', vistas.entregados.filter((f) => f.estatus === 'Finalizado').length],
     ],
   }[sub]
 
@@ -333,15 +334,15 @@ export default function MerchantCarrier({ embarques: embarquesProp }) {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {kpis.map(([rotulo, valor, tono]) => (
-          <Kpi key={rotulo} rotulo={rotulo} valor={valor} tono={tono} />
+        {kpis.map(([rotulo, valor]) => (
+          <Kpi key={rotulo} rotulo={rotulo} valor={valor} />
         ))}
       </div>
 
-      <div className="panel">
-        <div className="panel-head flex-wrap">
-          <span className="panel-title">{SUBS.find((x) => x.id === sub).rotulo}</span>
-          <div className="ml-auto flex flex-wrap items-center gap-2">
+      <PanelPlegable
+        titulo={<>{SUBS.find((x) => x.id === sub).rotulo}</>}
+        acciones={
+          <div className="flex flex-wrap items-center gap-2">
             <Select
               placeholder={sub === 'entregados' ? 'Todos los estatus' : 'Todos los riesgos'}
               options={sub === 'entregados' ? ESTADOS_FINIQUITO : ['Alto', 'Medio', 'Bajo']}
@@ -370,8 +371,8 @@ export default function MerchantCarrier({ embarques: embarquesProp }) {
               </Button>
             )}
           </div>
-        </div>
-
+        }
+      >
         <div className="tabla-scroll">
           {/* ---------------------------- PRE-COORDINACIÓN ---------------------------- */}
           {sub === 'pre' && (
@@ -629,7 +630,7 @@ export default function MerchantCarrier({ embarques: embarquesProp }) {
             </table>
           )}
         </div>
-      </div>
+      </PanelPlegable>
 
       {/* --------------------------- MODAL COORDINAR ----------------------------- */}
       <Modal
@@ -667,14 +668,14 @@ export default function MerchantCarrier({ embarques: embarquesProp }) {
             </div>
 
             {coordinando.modo === 'pre' && (
-              <div className="rounded-sm border border-navy-100 bg-navy-50 px-3 py-2 text-sm text-navy-700">
+              <div className="tarjeta px-3 py-2 text-sm">
                 El trámite en aduana va al <b className="num">{coordinando.pct}%</b>. Pre-coordinar
                 ahora reserva la ventana antes de que el embarque quede liberado.
               </div>
             )}
 
             {coordinando.embarque.delay > 0 && (
-              <div className="flex items-start gap-2 rounded-sm border border-rojo-100 bg-rojo-50 px-3 py-2 text-sm text-rojo-700">
+              <div className="flex items-start gap-2 tarjeta px-3 py-2 text-sm">
                 <LuTriangleAlert size={15} className="mt-px shrink-0" />
                 <span>
                   El embarque acumula <b className="num">+{coordinando.embarque.delay} días</b> y tiene
@@ -796,7 +797,7 @@ export default function MerchantCarrier({ embarques: embarquesProp }) {
             </div>
 
             {finiquito.costos.length === 0 ? (
-              <div className="rounded-sm border border-teal-100 bg-teal-50 px-3 py-2 text-sm text-teal-700">
+              <div className="tarjeta px-3 py-2 text-sm">
                 No hay costos excedidos asociados a este embarque; el finiquito ya está cerrado.
               </div>
             ) : (

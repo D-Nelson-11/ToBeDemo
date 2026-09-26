@@ -13,6 +13,7 @@ import {
 } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
 import Panel from '../components/ui/Panel'
+import PanelPlegable from '../components/ui/PanelPlegable'
 
 // Simulación: nada sale del navegador. Los PDFs solo se muestran por nombre y
 // las observaciones son siempre las mismas, inventadas.
@@ -189,7 +190,13 @@ export default function Compare() {
       )}
 
       {estado === 'listo' && (
-        <Panel titulo="Observaciones de la IA" icono={LuSparkles} flush>
+        <PanelPlegable
+          titulo={
+            <>
+              <LuSparkles size={14} /> Observaciones de la IA
+            </>
+          }
+        >
           <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
             {['rojo', 'alerta', 'ok'].map((t) => {
               const { icono: Icono, rotulo, chip } = TONO[t]
@@ -235,7 +242,7 @@ export default function Compare() {
               </tbody>
             </table>
           </div>
-        </Panel>
+        </PanelPlegable>
       )}
     </>
   )

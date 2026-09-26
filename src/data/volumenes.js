@@ -18,15 +18,13 @@ export const ADUANAS = [
 
 export const MODOS = ['Marítimo', 'Aéreo', 'Terrestre FTL', 'Terrestre LCL']
 
-// Paleta categórica de las modalidades. El ORDEN es parte del dato: se validó
-// por pares adyacentes (banda de luminosidad, croma, separación para daltonismo
-// y contraste contra el blanco del panel). Cambiar un color o reordenarlos
-// obliga a volver a validar — dos de estos juntos en otro orden no pasan.
+// Azules de AZULES (Graficos.jsx), alternando oscuro/claro: si dos vecinos
+// quedan del mismo tono ya no se distinguen en el Reparto.
 export const MODO_COLOR = {
-  Marítimo: '#1f6fb2',
-  Aéreo: '#b87400',
-  'Terrestre FTL': '#00897b',
-  'Terrestre LCL': '#c1502e',
+  Marítimo: '#003049',
+  Aéreo: '#5b9bd5',
+  'Terrestre FTL': '#1f5f8b',
+  'Terrestre LCL': '#a9c9e6',
 }
 
 export const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']

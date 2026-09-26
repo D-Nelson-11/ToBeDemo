@@ -172,11 +172,7 @@ export default function ModalActualizarFechas({ filas, abierto, onClose, onListo
         <div
           className={cx(
             'flex items-start gap-2.5 rounded-sm border px-3 py-2.5 text-sm',
-            retrasa
-              ? 'border-ambar-100 bg-ambar-50 text-ambar-700'
-              : adelanta
-                ? 'border-teal-100 bg-teal-50 text-teal-700'
-                : 'border-line bg-surface-2 text-ink-2',
+            retrasa || adelanta ? 'tarjeta' : 'border-line bg-surface-2 text-ink-2',
           )}
         >
           {retrasa ? (
@@ -291,11 +287,7 @@ export default function ModalActualizarFechas({ filas, abierto, onClose, onListo
 
           {/* --- el resumen del impacto --- */}
           <div
-            className={cx(
-              'panel p-4',
-              retrasa && 'border-ambar-100 bg-ambar-50',
-              adelanta && 'border-teal-100 bg-teal-50',
-            )}
+            className="panel p-4"
           >
             <h3 className="panel-title mb-3">Resumen del cambio</h3>
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3">

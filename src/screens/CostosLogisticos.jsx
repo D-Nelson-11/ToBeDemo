@@ -1,18 +1,12 @@
 import { useEffect, useRef, useMemo, useState } from 'react'
 import { LuChevronDown, LuFileDown, LuPrinter, LuSearchX, LuZap } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
+import PanelPlegable from '../components/ui/PanelPlegable'
 import { Input, Select } from '../components/ui/Field'
 import ModalCostoEmbarque from './ModalCostoEmbarque'
 import { useOc } from '../data/store'
 import { MODULOS_COSTOS, VISTAS_COSTOS } from '../data/costos'
 
-// Los tonos del HTML de referencia traducidos a la paleta del portal.
-const TONO_METRICA = {
-  red: 'border-rojo-100 bg-rojo-50',
-  yellow: 'border-ambar-100 bg-ambar-50',
-  green: 'border-teal-100 bg-teal-50',
-  purple: 'border-navy-100 bg-navy-50',
-}
 
 const TONO_BADGE = {
   delay: 'bg-rojo-50 text-rojo-700',
@@ -104,8 +98,7 @@ function Metrica({ m }) {
   return (
     <div
       className={cx(
-        'min-w-[150px] flex-1 rounded-sm border p-3',
-        TONO_METRICA[m.tono] ?? 'border-line bg-surface-2',
+        'tarjeta min-w-[150px] flex-1 p-3',
       )}
     >
       <span className="block text-xs text-ink-3">{m.rotulo}</span>
@@ -120,9 +113,7 @@ function Nota({ nota }) {
     <div
       className={cx(
         'rounded-sm border px-3 py-2 text-sm',
-        nota.tipo === 'alert'
-          ? 'border-rojo-100 bg-rojo-50 text-rojo-700'
-          : 'border-line bg-surface-2 text-ink-2',
+        nota.tipo === 'alert' ? 'tarjeta font-medium' : 'border-line bg-surface-2 text-ink-2',
       )}
     >
       {nota.texto}
@@ -335,48 +326,50 @@ export default function CostosLogisticos() {
       )}
 
       {v.columnas && (
-        <div className="panel tabla-scroll">
-          <table className="tbl">
-            <thead>
-              <tr>
-                {v.columnas.map((c, i) => (
-                  <th key={i}>{c}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filas.length === 0 && (
+        <PanelPlegable titulo="Detalle">
+          <div className="tabla-scroll">
+            <table className="tbl">
+              <thead>
                 <tr>
-                  <td colSpan={v.columnas.length} className="text-ink-3">
-                    Ningún registro con esos filtros.
-                  </td>
-                </tr>
-              )}
-              {filas.map((f, i) => (
-                <tr key={i}>
-                  {f.map((celda, j) => (
-                    <td key={j}>
-                      <Celda
-                        celda={celda}
-                        onAccion={(a) =>
-                          a === 'Detalle'
-                            ? setDetalle({ vista: v, fila: f })
-                            : avisar(
-                                (ACCION[a]?.rotulo ?? a) +
-                                  ' · ' +
-                                  (f[0]?.texto ?? '') +
-                                  ' — registrado en la bitácora (demo).',
-                                'alerta',
-                              )
-                        }
-                      />
-                    </td>
+                  {v.columnas.map((c, i) => (
+                    <th key={i}>{c}</th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filas.length === 0 && (
+                  <tr>
+                    <td colSpan={v.columnas.length} className="text-ink-3">
+                      Ningún registro con esos filtros.
+                    </td>
+                  </tr>
+                )}
+                {filas.map((f, i) => (
+                  <tr key={i}>
+                    {f.map((celda, j) => (
+                      <td key={j}>
+                        <Celda
+                          celda={celda}
+                          onAccion={(a) =>
+                            a === 'Detalle'
+                              ? setDetalle({ vista: v, fila: f })
+                              : avisar(
+                                  (ACCION[a]?.rotulo ?? a) +
+                                    ' · ' +
+                                    (f[0]?.texto ?? '') +
+                                    ' — registrado en la bitácora (demo).',
+                                  'alerta',
+                                )
+                          }
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </PanelPlegable>
       )}
 
       {v.reglas && (

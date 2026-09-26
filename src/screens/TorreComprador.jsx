@@ -13,6 +13,8 @@ import {
   LuWarehouse,
 } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
+import PanelPlegable from '../components/ui/PanelPlegable'
+import { TONO_MAGNITUD } from '../components/ui/Graficos'
 import ModalEmbarque from '../components/ModalEmbarque'
 import { Select } from '../components/ui/Field'
 import { Kpi } from '../components/ui/Valores'
@@ -41,12 +43,6 @@ const TONO_RIESGO = {
 
 const TONO_IMPACTO = { Alto: 'text-rojo-700', Medio: 'text-ambar-700', Bajo: 'text-teal-700' }
 
-const TONO_NIVEL = {
-  teal: 'border-teal-100 bg-teal-50 text-teal-700',
-  ambar: 'border-ambar-100 bg-ambar-50 text-ambar-700',
-  rojo: 'border-rojo-100 bg-rojo-50 text-rojo-700',
-}
-
 function Barra({ pct }) {
   const tono = pct >= 80 ? 'bg-teal-600' : pct >= 40 ? 'bg-navy-600' : 'bg-ambar-500'
   return (
@@ -72,31 +68,33 @@ function Chip({ tono, children }) {
   )
 }
 
-function Tabla({ columnas, filas, vacio, children }) {
+function Tabla({ titulo, columnas, filas, vacio, children }) {
   return (
-    <div className="panel tabla-scroll">
-      <table className="tbl">
-        <thead>
-          <tr>
-            {columnas.map(([rotulo, ancho]) => (
-              <th key={rotulo} className={ancho}>
-                {rotulo}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {filas.length === 0 && (
+    <PanelPlegable titulo={titulo} extra={<span className="num text-xs text-ink-3">{filas.length}</span>}>
+      <div className="tabla-scroll">
+        <table className="tbl">
+          <thead>
             <tr>
-              <td colSpan={columnas.length} className="h-[140px]! bg-surface text-center text-sm text-ink-3">
-                {vacio}
-              </td>
+              {columnas.map(([rotulo, ancho]) => (
+                <th key={rotulo} className={ancho}>
+                  {rotulo}
+                </th>
+              ))}
             </tr>
-          )}
-          {filas.map(children)}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {filas.length === 0 && (
+              <tr>
+                <td colSpan={columnas.length} className="h-[140px]! bg-surface text-center text-sm text-ink-3">
+                  {vacio}
+                </td>
+              </tr>
+            )}
+            {filas.map(children)}
+          </tbody>
+        </table>
+      </div>
+    </PanelPlegable>
   )
 }
 
@@ -222,72 +220,16 @@ export default function TorreComprador() {
       {vista === 'resumen' && (
         <>
           <div className="flex flex-wrap gap-2">
-            <Kpi rotulo="Sin programación" valor={fmtNum(totales.sinProgramacion)} tono="border-rojo-100 bg-rojo-50" />
-            <Kpi rotulo="Programado" valor={fmtNum(totales.programacion)} tono="border-ambar-100 bg-ambar-50" />
+            <Kpi rotulo="Sin programación" valor={fmtNum(totales.sinProgramacion)} />
+            <Kpi rotulo="Programado" valor={fmtNum(totales.programacion)} />
             <Kpi rotulo="En tránsito" valor={fmtNum(totales.transito)} />
             <Kpi rotulo="En aduana" valor={fmtNum(totales.aduana)} />
             <Kpi rotulo="En planta" valor={fmtNum(totales.planta)} />
-            <Kpi rotulo="Entregado" valor={fmtNum(totales.entregados)} tono="border-teal-100 bg-teal-50" />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <div className="panel">
-              <div className="panel-head">
-                <span className="panel-title">Pedidos por etapa</span>
-                <span className="ml-auto text-sm text-ink-3">unidades</span>
-              </div>
-              <div className="flex flex-col gap-2.5 p-4">
-                {[
-                  ['Sin programación', totales.sinProgramacion, 'bg-rojo-600'],
-                  ['Programado', totales.programacion, 'bg-ambar-500'],
-                  ['En tránsito', totales.transito, 'bg-navy-600'],
-                  ['En aduana', totales.aduana, 'bg-navy-400'],
-                  ['En planta', totales.planta, 'bg-teal-600'],
-                  ['Entregado', totales.entregados, 'bg-teal-700'],
-                ].map(([rotulo, valor, tono]) => {
-                  const max = Math.max(...Object.values(totales), 1)
-                  return (
-                    <div key={rotulo}>
-                      <div className="flex items-baseline justify-between gap-3 text-sm">
-                        <span className="text-ink-2">{rotulo}</span>
-                        <b className="num font-bold text-navy-800">{fmtNum(valor)}</b>
-                      </div>
-                      <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-surface-3">
-                        <span className={cx('block h-full', tono)} style={{ width: `${(valor / max) * 100}%` }} />
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div className="panel">
-              <div className="panel-head">
-                <span className="panel-title">Alertas prioritarias</span>
-              </div>
-              <div className="flex flex-col gap-2 p-4">
-                {rows.sinProgramacion.length === 0 && rows.alertas.length === 0 && (
-                  <p className="text-sm text-ink-3">Ningún pedido requiere gestión en este momento.</p>
-                )}
-                {rows.sinProgramacion.slice(0, 3).map((f) => (
-                  <div key={f.clave} className="rounded-sm border border-rojo-100 bg-rojo-50 px-3 py-2 text-sm text-rojo-700">
-                    <b className="font-bold">OC {f.oc.id} — {f.motivo}</b>
-                    <span className="block">
-                      {fmtNum(f.cantidad)} {f.unidad} sin programación del proveedor.
-                    </span>
-                  </div>
-                ))}
-                {rows.alertas.slice(0, 3).map((a) => (
-                  <div key={a.clave} className={cx('rounded-sm border px-3 py-2 text-sm', TONO_NIVEL[NIVELES[a.nivel].tono])}>
-                    <b className="font-bold">{a.embarque.id}</b>
-                    <span className="block">{a.texto}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <Kpi rotulo="Entregado" valor={fmtNum(totales.entregados)} />
           </div>
 
           <Tabla
+            titulo="Programación proveedor"
             columnas={[
               ['OC', 'w-[110px]'],
               ['SKU', 'min-w-[190px]'],
@@ -322,12 +264,71 @@ export default function TorreComprador() {
               </tr>
             )}
           </Tabla>
+
+          <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+            <PanelPlegable
+              titulo="Pedidos por etapa"
+              extra={<span className="text-sm text-ink-3">unidades</span>}
+              abiertoAlInicio={false}
+            >
+              <div className="flex flex-col gap-2.5 p-4">
+                {[
+                  ['Sin programación', totales.sinProgramacion],
+                  ['Programado', totales.programacion],
+                  ['En tránsito', totales.transito],
+                  ['En aduana', totales.aduana],
+                  ['En planta', totales.planta],
+                  ['Entregado', totales.entregados],
+                ].map(([rotulo, valor]) => {
+                  const max = Math.max(...Object.values(totales), 1)
+                  return (
+                    <div key={rotulo}>
+                      <div className="flex items-baseline justify-between gap-3 text-sm">
+                        <span className="text-ink-2">{rotulo}</span>
+                        <b className="num font-bold text-navy-800">{fmtNum(valor)}</b>
+                      </div>
+                      <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-surface-3">
+                        <span className="block h-full" style={{ width: `${(valor / max) * 100}%`, background: TONO_MAGNITUD }} />
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </PanelPlegable>
+
+            <PanelPlegable
+              titulo="Alertas prioritarias"
+              extra={<span className="num text-xs text-ink-3">{rows.sinProgramacion.length + rows.alertas.length}</span>}
+              abiertoAlInicio={false}
+            >
+              <div className="flex flex-col gap-2 p-4">
+                {rows.sinProgramacion.length === 0 && rows.alertas.length === 0 && (
+                  <p className="text-sm text-ink-3">Ningún pedido requiere gestión en este momento.</p>
+                )}
+                {rows.sinProgramacion.slice(0, 3).map((f) => (
+                  <div key={f.clave} className="tarjeta px-3 py-2 text-sm">
+                    <b className="font-bold">OC {f.oc.id} — {f.motivo}</b>
+                    <span className="block">
+                      {fmtNum(f.cantidad)} {f.unidad} sin programación del proveedor.
+                    </span>
+                  </div>
+                ))}
+                {rows.alertas.slice(0, 3).map((a) => (
+                  <div key={a.clave} className="tarjeta px-3 py-2 text-sm">
+                    <b className="font-bold">{a.embarque.id}</b>
+                    <span className="block text-ink-2">{a.texto}</span>
+                  </div>
+                ))}
+              </div>
+            </PanelPlegable>
+          </div>
         </>
       )}
 
       {/* --------------------------- SIN PROGRAMACIÓN ---------------------------- */}
       {vista === 'sinProgramacion' && (
         <Tabla
+          titulo="Sin programación"
           columnas={[
             ['OC', 'w-[110px]'],
             ['Proveedor', 'w-[220px]'],
@@ -375,6 +376,7 @@ export default function TorreComprador() {
       {/* ---------------------------- PROGRAMACIÓN ------------------------------- */}
       {vista === 'programacion' && (
         <Tabla
+          titulo="Programación proveedor"
           columnas={[
             ['OC', 'w-[110px]'],
             ['Proveedor', 'w-[220px]'],
@@ -414,6 +416,7 @@ export default function TorreComprador() {
       {/* ------------------------------- TRÁNSITO -------------------------------- */}
       {vista === 'transito' && (
         <Tabla
+          titulo="En tránsito"
           columnas={[
             ['Embarque', 'w-[150px]'],
             ['OC', 'w-[110px]'],
@@ -465,6 +468,7 @@ export default function TorreComprador() {
       {/* -------------------------------- ADUANA --------------------------------- */}
       {vista === 'aduana' && (
         <Tabla
+          titulo="En aduana"
           columnas={[
             ['Embarque', 'w-[150px]'],
             ['OC', 'w-[110px]'],
@@ -528,6 +532,7 @@ export default function TorreComprador() {
       {/* -------------------------------- PLANTA --------------------------------- */}
       {vista === 'planta' && (
         <Tabla
+          titulo="En planta"
           columnas={[
             ['OC', 'w-[110px]'],
             ['Embarque', 'w-[150px]'],
@@ -563,6 +568,7 @@ export default function TorreComprador() {
       {/* ------------------------------ ENTREGADOS ------------------------------- */}
       {vista === 'entregados' && (
         <Tabla
+          titulo="Entregados"
           columnas={[
             ['OC', 'w-[110px]'],
             ['Proveedor', 'w-[220px]'],
@@ -619,7 +625,7 @@ export default function TorreComprador() {
             {rows.sinProgramacion.map((f) => (
               <div
                 key={f.clave}
-                className="flex flex-wrap items-start gap-2.5 rounded-sm border border-rojo-100 bg-rojo-50 px-3 py-2.5 text-sm text-rojo-700"
+                className="flex flex-wrap items-start gap-2.5 tarjeta px-3 py-2.5 text-sm"
               >
                 <LuTriangleAlert size={15} className="mt-px shrink-0" />
                 <span className="min-w-0 flex-1">
@@ -633,10 +639,7 @@ export default function TorreComprador() {
             {rows.alertas.map((a) => (
               <div
                 key={a.clave}
-                className={cx(
-                  'flex flex-wrap items-start gap-2.5 rounded-sm border px-3 py-2.5 text-sm',
-                  TONO_NIVEL[NIVELES[a.nivel].tono],
-                )}
+                className="tarjeta flex flex-wrap items-start gap-2.5 px-3 py-2.5 text-sm"
               >
                 <LuClipboardList size={15} className="mt-px shrink-0" />
                 <span className="min-w-0 flex-1">

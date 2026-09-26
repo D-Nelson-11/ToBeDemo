@@ -1,14 +1,13 @@
 import { useMemo, useState } from 'react'
 import { LuSearchX } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
+import PanelPlegable from '../components/ui/PanelPlegable'
 import { Select } from '../components/ui/Field'
-import { BarrasH, BarrasV, Lineas, Reparto } from '../components/ui/Graficos'
+import { BarrasH, BarrasV, Lineas, Reparto, azulesPara } from '../components/ui/Graficos'
 import { Kpi } from '../components/ui/Valores'
 import { MESES, REGIMENES } from '../data/preciosGastos'
 import { agrupar, desglose, distintos, filtrar, money, pct1, promedio, suma } from '../lib/preciosGastos'
 
-const PALETA = ['#0b4668', '#078a78', '#2f6f9f', '#d58b20', '#7b61a8', '#4d8b9b', '#8a6f4d', '#5d7c6f', '#9b5c74']
-const colorDe = (claves) => Object.fromEntries(claves.map((c, i) => [c, PALETA[i % PALETA.length]]))
 
 const PAGINAS = [
   ['dashboard', 'Dashboard'],
@@ -44,31 +43,33 @@ function Grafico({ titulo, sub, children }) {
   )
 }
 
-function Tabla({ columnas, filas, children }) {
+function Tabla({ titulo, columnas, filas, children }) {
   return (
-    <div className="panel tabla-scroll">
-      <table className="tbl">
-        <thead>
-          <tr>
-            {columnas.map(([r, a]) => (
-              <th key={r} className={a}>
-                {r}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {filas.length === 0 && (
+    <PanelPlegable titulo={titulo} extra={<span className="num text-xs text-ink-3">{filas.length}</span>}>
+      <div className="tabla-scroll">
+        <table className="tbl">
+          <thead>
             <tr>
-              <td colSpan={columnas.length} className="h-[120px]! bg-surface text-center text-sm text-ink-3">
-                Sin datos con estos filtros.
-              </td>
+              {columnas.map(([r, a]) => (
+                <th key={r} className={a}>
+                  {r}
+                </th>
+              ))}
             </tr>
-          )}
-          {filas.map(children)}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {filas.length === 0 && (
+              <tr>
+                <td colSpan={columnas.length} className="h-[120px]! bg-surface text-center text-sm text-ink-3">
+                  Sin datos con estos filtros.
+                </td>
+              </tr>
+            )}
+            {filas.map(children)}
+          </tbody>
+        </table>
+      </div>
+    </PanelPlegable>
   )
 }
 
@@ -89,14 +90,9 @@ function Metricas({ filas, total }) {
   )
 }
 
-function Insight({ tono = 'teal', children }) {
+function Insight({ children }) {
   return (
-    <div
-      className={cx(
-        'mt-3 rounded-sm border-l-4 px-3 py-2 text-sm',
-        tono === 'ambar' ? 'border-ambar-500 bg-ambar-50 text-ambar-800' : 'border-teal-600 bg-teal-50 text-teal-800',
-      )}
-    >
+    <div className="mt-3 rounded-sm border-l-4 border-navy-600 bg-surface px-3 py-2 text-sm text-navy-800">
       {children}
     </div>
   )
@@ -110,9 +106,9 @@ function Dashboard({ datos: a }) {
     ['Embarques', a.length],
     ['Mercancía', money(suma(a, 'goods'))],
     ['Flete', money(suma(a, 'freight'))],
-    ['Impuestos', money(suma(a, 'tax')), 'border-ambar-100 bg-ambar-50'],
+    ['Impuestos', money(suma(a, 'tax'))],
     ['Arancel', money(suma(a, 'duty'))],
-    ['Costo importado', money(total), 'border-teal-100 bg-teal-50'],
+    ['Costo importado', money(total)],
   ]
   const mix = desglose(a).map((d) => ({ clave: d.rotulo, valor: d.monto }))
   const porMes = MESES.map((m) => ({ clave: m, valor: promedio(a.filter((d) => d.month === m), 'total') })).filter(
@@ -125,13 +121,13 @@ function Dashboard({ datos: a }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-2">
-        {kpis.map(([rot, val, tono]) => (
-          <Kpi key={rot} rotulo={rot} valor={val} tono={tono} />
+        {kpis.map(([rot, val]) => (
+          <Kpi key={rot} rotulo={rot} valor={val} />
         ))}
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Grafico titulo="Composición del costo importado" sub={money(total)}>
-          <Reparto datos={mix} color={colorDe(mix.map((m) => m.clave))} fmt={money} />
+          <Reparto datos={mix} color={azulesPara(mix.map((m) => m.clave))} fmt={money} />
         </Grafico>
         <Grafico titulo="Costo promedio por mes">
           <Lineas datos={porMes} fmt={money} />
@@ -168,6 +164,7 @@ function Precios({ datos: a }) {
         </Grafico>
       </div>
       <Tabla
+        titulo="Detalle · Precios de productos"
         columnas={[
           ['Mes', 'w-[90px]'],
           ['SKU', 'w-[90px]'],
@@ -221,11 +218,10 @@ function Tendencia({ datos: a }) {
       </Grafico>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Kpi rotulo="Costo promedio / embarque" valor={money(promedio(a, 'total'))} />
-        <Kpi rotulo="Mes de mayor costo" valor={mayor ? `${mayor.clave} · ${money(mayor.valor)}` : '—'} tono="border-ambar-100 bg-ambar-50" />
+        <Kpi rotulo="Mes de mayor costo" valor={mayor ? `${mayor.clave} · ${money(mayor.valor)}` : '—'} />
         <Kpi
           rotulo="Variación último mes"
           valor={variacion == null ? '—' : `${variacion > 0 ? '+' : ''}${variacion.toFixed(1)}%`}
-          tono={variacion > 0 ? 'border-rojo-100 bg-rojo-50' : 'border-teal-100 bg-teal-50'}
         />
       </div>
     </div>
@@ -279,6 +275,7 @@ function IncoPrecio({ datos: a }) {
         </section>
       </div>
       <Tabla
+        titulo="Detalle · Precio según Incoterm"
         columnas={[
           ['Incoterm', 'w-[90px]'],
           ['SKU', 'w-[90px]'],
@@ -326,6 +323,7 @@ function Fletes({ datos: a }) {
         </Grafico>
       </div>
       <Tabla
+        titulo="Detalle · Fletes por origen"
         columnas={[
           ['Origen', 'w-[120px]'],
           ['Naviera', 'w-[140px]'],
@@ -359,7 +357,7 @@ function Seguros({ datos: a }) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Kpi rotulo="Seguro total" valor={money(suma(a, 'insurance'))} />
         <Kpi rotulo="Promedio / embarque" valor={money(promedio(a, 'insurance'))} />
-        <Kpi rotulo="Tasa promedio" valor={pct1(promedio(a, 'insuranceRate'))} tono="border-navy-100 bg-navy-50" />
+        <Kpi rotulo="Tasa promedio" valor={pct1(promedio(a, 'insuranceRate'))} />
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Grafico titulo="Seguro por origen">
@@ -392,8 +390,8 @@ function Impuestos({ datos: a }) {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi rotulo="Impuestos pagados" valor={money(suma(a, 'tax'))} />
         <Kpi rotulo="Aranceles pagados" valor={money(suma(a, 'duty'))} />
-        <Kpi rotulo="Arancel cero" valor={`${a.filter((d) => d.duty === 0).length} embarques`} tono="border-teal-100 bg-teal-50" />
-        <Kpi rotulo="Carga fiscal / mercancía" valor={pct1(cargaFiscal)} tono="border-ambar-100 bg-ambar-50" />
+        <Kpi rotulo="Arancel cero" valor={`${a.filter((d) => d.duty === 0).length} embarques`} />
+        <Kpi rotulo="Carga fiscal / mercancía" valor={pct1(cargaFiscal)} />
       </div>
     </div>
   )
@@ -424,13 +422,14 @@ function Regimenes({ datos: a }) {
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Grafico titulo="Distribución por régimen">
-          <Reparto datos={distribucion} color={colorDe(distribucion.map((d) => d.clave))} />
+          <Reparto datos={distribucion} color={azulesPara(distribucion.map((d) => d.clave))} />
         </Grafico>
         <Grafico titulo="Ahorro arancelario estimado" sub="mercancía × 5% menos arancel pagado">
           <BarrasH datos={ahorro} fmt={money} />
         </Grafico>
       </div>
       <Tabla
+        titulo="Detalle · TLC / Regímenes"
         columnas={[
           ['Régimen', 'w-[110px]'],
           ['SKU', 'w-[90px]'],
@@ -477,10 +476,11 @@ function Aduaneros({ datos: a }) {
           <BarrasH datos={porAduana.map((g) => ({ clave: g.clave, valor: g.valor }))} fmt={money} />
         </Grafico>
         <Grafico titulo="Composición de gastos" sub={money(suma(a, 'customsTotal'))}>
-          <Reparto datos={mix} color={colorDe(mix.map((m) => m.clave))} fmt={money} />
+          <Reparto datos={mix} color={azulesPara(mix.map((m) => m.clave))} fmt={money} />
         </Grafico>
       </div>
       <Tabla
+        titulo="Detalle · Gastos aduaneros"
         columnas={[
           ['Aduana', 'w-[140px]'],
           ['Embarques', 'w-[100px] text-right!'],
@@ -527,7 +527,7 @@ function Control({ datos: a }) {
           <div className="lbl">Flete</div>
           <b className="num my-1 block text-2xl font-bold text-navy-800">{fleteAlto.length}</b>
           <span className="text-sm text-ink-3">embarques con flete &gt; 8% de la mercancía</span>
-          <Insight tono="ambar">Comparar origen y naviera para ubicar rutas con más peso logístico.</Insight>
+          <Insight>Comparar origen y naviera para ubicar rutas con más peso logístico.</Insight>
         </section>
         <section className="panel p-4">
           <div className="lbl">Carga arancelaria</div>
@@ -537,6 +537,7 @@ function Control({ datos: a }) {
         </section>
       </div>
       <Tabla
+        titulo="Detalle · Puntos de control"
         columnas={[
           ['Ref', 'w-[110px]'],
           ['SKU', 'w-[90px]'],

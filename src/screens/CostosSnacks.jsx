@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { LuFileDown, LuFileText, LuPrinter, LuSearchX, LuTriangleAlert } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
+import PanelPlegable from '../components/ui/PanelPlegable'
 import Modal from '../components/ui/Modal'
 import { Select, Textarea } from '../components/ui/Field'
 import { BarrasH, LineasMulti } from '../components/ui/Graficos'
@@ -201,11 +202,11 @@ export default function CostosSnacks() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Kpi rotulo="Costo logístico total" valor={dinero(k.total)} tono="border-navy-100 bg-navy-50" />
-        <Kpi rotulo={`Costo extraordinario · ${k.pctExtra}%`} valor={dinero(k.extra)} tono="border-rojo-100 bg-rojo-50" />
+        <Kpi rotulo="Costo logístico total" valor={dinero(k.total)} />
+        <Kpi rotulo={`Costo extraordinario · ${k.pctExtra}%`} valor={dinero(k.extra)} />
         <Kpi rotulo="Promedio por embarque" valor={dinero(k.promedio)} />
-        <Kpi rotulo={`Demora y estadías · ${k.pctDemora}%`} valor={dinero(k.demora)} tono="border-ambar-100 bg-ambar-50" />
-        <Kpi rotulo="Ahorro potencial" valor={dinero(k.ahorro)} tono="border-teal-100 bg-teal-50" />
+        <Kpi rotulo={`Demora y estadías · ${k.pctDemora}%`} valor={dinero(k.demora)} />
+        <Kpi rotulo="Ahorro potencial" valor={dinero(k.ahorro)} />
       </div>
 
       {/* La tendencia necesita ancho; las dos de barras son cortas y caben en un cuarto */}
@@ -218,10 +219,7 @@ export default function CostosSnacks() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <div className="panel">
-          <div className="panel-head">
-            <span className="panel-title">Costo por naviera</span>
-          </div>
+        <PanelPlegable titulo="Costo por naviera">
           <table className="tbl">
             <thead>
               <tr>
@@ -249,12 +247,9 @@ export default function CostosSnacks() {
               ))}
             </tbody>
           </table>
-        </div>
+        </PanelPlegable>
 
-        <div className="panel">
-          <div className="panel-head">
-            <span className="panel-title">Embarques de mayor atención</span>
-          </div>
+        <PanelPlegable titulo="Embarques de mayor atención">
           <table className="tbl">
             <thead>
               <tr>
@@ -284,14 +279,14 @@ export default function CostosSnacks() {
               ))}
             </tbody>
           </table>
-        </div>
+        </PanelPlegable>
 
         <Panel titulo="Semáforo de exposición" pie="clasificación automática">
           <div className="flex flex-col gap-2">
             {semaforo.map((e) => (
               <div
                 key={e.prioridad}
-                className={cx('rounded-sm border px-3 py-2', TONO_PRIORIDAD[e.prioridad].borde)}
+                className="tarjeta px-3 py-2"
               >
                 <div className="flex items-baseline justify-between gap-3">
                   <b className="font-bold">{e.prioridad}</b>
@@ -321,13 +316,13 @@ export default function CostosSnacks() {
           <p className="text-sm text-ink-3">Sin datos con estos filtros.</p>
         ) : (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-            <div className="rounded-sm border border-rojo-100 bg-rojo-50 p-4">
-              <span className="flex items-center gap-1.5 text-sm font-bold text-rojo-700">
+            <div className="tarjeta p-4">
+              <span className="flex items-center gap-1.5 text-sm font-bold text-navy-700">
                 <LuTriangleAlert size={14} />
                 Mayor impacto
               </span>
               <b className="mt-1 block text-xl font-bold text-navy-800">{lider.clave}</b>
-              <b className="num block text-3xl font-bold text-rojo-700">{dinero(lider.valor)}</b>
+              <b className="num block text-3xl font-bold text-navy-800">{dinero(lider.valor)}</b>
               <span className="mt-1 block text-sm text-ink-2">
                 {lider.pct}% del costo filtrado · {lider.embarques} embarques
               </span>
@@ -350,13 +345,14 @@ export default function CostosSnacks() {
         )}
       </Panel>
 
-      <div className="panel">
-        <div className="panel-head">
-          <span className="panel-title">Detalle operacional de costos</span>
-          <span className="num ml-auto text-sm text-ink-3">
+      <PanelPlegable
+        titulo="Detalle operacional de costos"
+        extra={
+          <span className="num text-sm text-ink-3">
             {detalle.length} de {k.embarques} · mayores primero
           </span>
-        </div>
+        }
+      >
         <div className="tabla-scroll">
           <table className="tbl">
             <thead>
@@ -394,7 +390,7 @@ export default function CostosSnacks() {
             </tbody>
           </table>
         </div>
-      </div>
+      </PanelPlegable>
 
       {informe && (
         <div className="sticky bottom-4 z-10 flex flex-wrap items-center gap-3 rounded-sm border border-navy-100 bg-navy-50 px-4 py-3 shadow-[0_10px_28px_-14px_rgba(0,28,44,0.45)]">

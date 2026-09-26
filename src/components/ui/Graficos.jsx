@@ -7,7 +7,14 @@ import { cx } from './Button'
 
 // Un solo tono para magnitudes: cuando la categoría ya está en la etiqueta,
 // pintar cada barra de un color distinto no agrega información.
-export const TONO_MAGNITUD = '#17587a'
+export const TONO_MAGNITUD = '#1f5f8b'
+
+// Todo gráfico va en azules. Los vecinos alternan oscuro/claro para que dos
+// categorías seguidas se distingan; la leyenda siempre lleva el valor.
+export const AZULES = ['#003049', '#5b9bd5', '#1f5f8b', '#a9c9e6', '#3d85c6', '#0b4668', '#7aaedb', '#2f6f9f', '#cfe0ee']
+
+/** Mapa clave → azul, en el orden de las claves. */
+export const azulesPara = (claves) => Object.fromEntries(claves.map((c, i) => [c, AZULES[i % AZULES.length]]))
 
 /** Globo de valor. Vive dentro de un contenedor `relative`. */
 function Globo({ children, x, y }) {
