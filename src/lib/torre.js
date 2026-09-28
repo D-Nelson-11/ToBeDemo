@@ -59,7 +59,8 @@ export function construirEmbarques(ordenes) {
     .filter((oc) => oc.activa)
     .forEach((oc) =>
       oc.despachos.forEach((d) => {
-        const ruta = RUTAS[d.ruta] ?? RUTAS.longbeach
+        // Las salidas del Warehouse traen su ruta armada: no están en el catálogo de rutas del paso 2.
+        const ruta = d.rutaDetalle ?? RUTAS[d.ruta] ?? RUTAS.longbeach
         const etd = parseISO(d.salida)
         if (!etd) return
         const frontera = addDays(etd, ruta.leg1)
@@ -90,7 +91,7 @@ export function construirEmbarques(ordenes) {
           riesgo,
           segmento,
           sitio: oc.centro,
-          transporte: terrestre ? 'FTL · Terrestre' : 'FCL · Contenedor',
+          transporte: d.transporte ?? (terrestre ? 'FTL · Terrestre' : 'FCL · Contenedor'),
           buque: terrestre ? `Unidad ${1000 + (s % 900)}` : elige(BUQUES, s),
           // ETA original: la que se prometió con la fecha de salida planificada.
           etaOriginal: addDays(plan, ruta.leg1 + ruta.leg2),

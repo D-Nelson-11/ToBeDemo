@@ -21,6 +21,7 @@ const CostosLogisticos = lazy(() => import('./screens/CostosLogisticos'))
 const MerchantCarrier = lazy(() => import('./screens/MerchantCarrier'))
 const Kpi = lazy(() => import('./screens/Kpi'))
 const Correo = lazy(() => import('./screens/Correo'))
+const WarehouseVirtual = lazy(() => import('./screens/WarehouseVirtual'))
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -48,6 +49,9 @@ createRoot(document.getElementById('root')).render(
             </Route>
             <Route path="/kpi" element={<Contenedor />}>
               <Route index element={<Kpi />} />
+            </Route>
+            <Route path="/warehouse" element={<Contenedor />}>
+              <Route index element={<WarehouseVirtual />} />
             </Route>
             <Route path="/correo" element={<Correo />} />
             <Route path="*" element={<Navigate to="/orden-compra" replace />} />

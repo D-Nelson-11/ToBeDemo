@@ -18,6 +18,7 @@ import {
   LuTowerControl,
   LuTriangleAlert,
   LuUserCog,
+  LuWarehouse,
   LuWorkflow,
   LuX,
 } from 'react-icons/lu'
@@ -42,6 +43,14 @@ export const MODULOS = [
     icono: LuWorkflow,
     to: PASOS[0].to,
     rutas: PASOS.map((p) => p.to),
+  },
+  {
+    id: 'warehouse',
+    titulo: 'Warehouse Virtual',
+    sub: 'Recepción y consolidación',
+    icono: LuWarehouse,
+    to: '/warehouse',
+    rutas: ['/warehouse'],
   },
   {
     id: 'torre',

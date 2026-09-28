@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useReducer, useRef, useState } from 'react'
 import { analizarCorreo, respuestaProveedor } from './correos'
 import { ORDENES_INICIALES } from './ordenes'
+import { envioDesdeFila, salidaDesdeItems, warehouseInicial } from '../lib/warehouse'
 
 const OcContext = createContext(null)
 
@@ -122,6 +123,10 @@ export function OcProvider({ children }) {
   const [finiquitos, setFiniquitos] = useState({})
   // Hitos FYDUCA cumplidos en la demo, por operación: se suman a los del mock.
   const [avancesFyduca, setAvancesFyduca] = useState({})
+  // Envíos al Warehouse Virtual: los manda Supply Scheduling y los recibe su pantalla.
+  const [warehouse, setWarehouse] = useState(warehouseInicial)
+  // Salidas consolidadas del Warehouse: la torre las lista junto con las OC.
+  const [salidasWh, setSalidasWh] = useState([])
   const envios = useRef({})
   const nextId = useRef(1)
 
@@ -181,6 +186,38 @@ export function OcProvider({ children }) {
     setFiniquitos((f) => ({ ...f, [clave]: estatus }))
   }, [])
 
+  // Un despacho que ya está en el Warehouse no se duplica: se actualiza su ETA y salida.
+  const enviarAWarehouse = useCallback((filas, { centro, eta, salida }) => {
+    setWarehouse((w) => {
+      const next = [...w]
+      filas.forEach((f) => {
+        const traza = { fecha: new Date(), evento: 'Enviado a punto de consolidación', detalle: centro }
+        const i = next.findIndex((x) => x.clave === f.clave)
+        if (i >= 0) {
+          next[i] = { ...next[i], eta, salida: salida || next[i].salida, traza: [...next[i].traza, traza] }
+        } else {
+          const ref = 'WH-' + String(next.length + 1).padStart(2, '0')
+          next.push({ ...envioDesdeFila(f, { ref, eta, salida }), traza: [traza] })
+        }
+      })
+      return next
+    })
+  }, [])
+
+  const crearSalidaWh = useCallback((items) => {
+    setSalidasWh((s) => [...s, salidaDesdeItems(items, s.length + 1)])
+  }, [])
+
+  const actualizarWarehouse = useCallback((ref, patch, evento) => {
+    setWarehouse((w) =>
+      w.map((x) =>
+        x.ref === ref
+          ? { ...x, ...patch, traza: evento ? [...x.traza, { fecha: new Date(), ...evento }] : x.traza }
+          : x,
+      ),
+    )
+  }, [])
+
   const avanzarFyduca = useCallback((id) => {
     setAvancesFyduca((a) => ({ ...a, [id]: [...(a[id] ?? []), new Date()] }))
   }, [])
@@ -198,6 +235,11 @@ export function OcProvider({ children }) {
       avanzarFiniquito,
       avancesFyduca,
       avanzarFyduca,
+      warehouse,
+      enviarAWarehouse,
+      actualizarWarehouse,
+      salidasWh,
+      crearSalidaWh,
       vista,
       setVista,
       cargando,
@@ -234,6 +276,11 @@ export function OcProvider({ children }) {
       avanzarFiniquito,
       avancesFyduca,
       avanzarFyduca,
+      warehouse,
+      enviarAWarehouse,
+      actualizarWarehouse,
+      salidasWh,
+      crearSalidaWh,
     ],
   )
 

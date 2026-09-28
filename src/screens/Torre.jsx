@@ -148,7 +148,7 @@ function BotonCompare({ embarque, onClick }) {
 }
 
 export default function Torre() {
-  const { ordenes, recolectas, coordinaciones, finiquitos, avancesFyduca, avisar } = useOc()
+  const { ordenes, recolectas, coordinaciones, finiquitos, avancesFyduca, salidasWh, avisar } = useOc()
   const [segmento, setSegmento] = useState('All')
   const [modalidad, setModalidad] = useState('Marítimo')
   const [sitio, setSitio] = useState('')
@@ -179,7 +179,7 @@ export default function Torre() {
     return () => el.removeEventListener('wheel', alRodar)
   }, [])
 
-  const embarques = useMemo(() => construirEmbarques(ordenes), [ordenes])
+  const embarques = useMemo(() => construirEmbarques([...ordenes, ...salidasWh]), [ordenes, salidasWh])
   const costos = useMemo(() => construirCostos(embarques), [embarques])
   const alertas = useMemo(() => construirAlertas(embarques), [embarques])
   const documentos = useMemo(() => construirDocumentos(embarques, recolectas), [embarques, recolectas])

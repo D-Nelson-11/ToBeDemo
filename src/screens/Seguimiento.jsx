@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   LuCalendarClock,
   LuClipboardCheck,
@@ -7,11 +8,13 @@ import {
   LuShip,
   LuSparkles,
   LuTriangleAlert,
+  LuWarehouse,
 } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
 import PanelPlegable from '../components/ui/PanelPlegable'
 import { Input, Select } from '../components/ui/Field'
 import ModalActualizarFechas from './ModalActualizarFechas'
+import ModalConsolidacion from './ModalConsolidacion'
 import { useOc } from '../data/store'
 import { CHECK_ADUANA, CHECK_LOGISTICA, INCOTERMS, RUTAS, requisitosAduana } from '../data/catalogos'
 import { addDays, desdeHoy, diasEntre, fmtFechaCorta, fmtNum, hoy, parseISO } from '../lib/fechas'
@@ -188,13 +191,15 @@ function Avance({ marcas = [], tono }) {
 }
 
 export default function Seguimiento() {
-  const { ordenes, marcarCheck, avisar } = useOc()
+  const { ordenes, marcarCheck, avisar, warehouse, enviarAWarehouse } = useOc()
+  const navigate = useNavigate()
   const [qOc, setQOc] = useState('')
   const [fIncoterm, setFIncoterm] = useState('')
   const [fAlerta, setFAlerta] = useState('')
   const [seleccion, setSeleccion] = useState(null)
   const [marcados, setMarcados] = useState(() => new Set())
   const [reprogramando, setReprogramando] = useState(false)
+  const [consolidando, setConsolidando] = useState(false)
 
   const todas = useMemo(() => construirFilas(ordenes), [ordenes])
 
@@ -226,6 +231,9 @@ export default function Seguimiento() {
 
   const alternarTodos = (v) =>
     setMarcados(v ? new Set(marcables.map((f) => f.clave)) : new Set())
+
+  // Despachos que ya están en el Warehouse Virtual: llevan el chip WH en la tabla.
+  const enWarehouse = useMemo(() => new Set(warehouse.map((x) => x.clave).filter(Boolean)), [warehouse])
 
   const conteo = useMemo(() => {
     const c = { rojo: 0, ambar: 0, teal: 0, gris: 0 }
@@ -305,7 +313,11 @@ export default function Seguimiento() {
               <Button variant="link" onClick={() => alternarTodos(false)}>
                 Quitar selección
               </Button>
-              <div className="ml-auto">
+              <div className="ml-auto flex flex-wrap gap-2">
+                <Button onClick={() => setConsolidando(true)}>
+                  <LuWarehouse size={14} />
+                  Enviar a punto de consolidación
+                </Button>
                 <Button variant="primary" onClick={() => setReprogramando(true)}>
                   <LuCalendarClock size={14} />
                   Actualizar fecha despacho
@@ -385,7 +397,17 @@ export default function Seguimiento() {
                           />
                         </td>
                         <td className="cell-key">{f.oc.id}</td>
-                        <td className="cell-strong">{f.despacho.id}</td>
+                        <td className="cell-strong">
+                          {f.despacho.id}
+                          {enWarehouse.has(f.clave) && (
+                            <span
+                              title="Enviado al Warehouse Virtual"
+                              className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-navy-50 px-1.5 py-px text-3xs font-semibold text-navy-700"
+                            >
+                              <LuWarehouse size={10} /> WH
+                            </span>
+                          )}
+                        </td>
                         <td className="cell-cut" title={f.material?.nombre}>
                           <span className="text-ink-3">{f.material?.codigo}</span> · {f.material?.nombre}
                         </td>
@@ -491,6 +513,18 @@ export default function Seguimiento() {
           )}
         </div>
       </div>
+
+      {consolidando && (
+        <ModalConsolidacion
+          filas={filasMarcadas}
+          onClose={() => setConsolidando(false)}
+          onEnviar={(datos) => {
+            enviarAWarehouse(filasMarcadas, datos)
+            setMarcados(new Set())
+            navigate('/warehouse')
+          }}
+        />
+      )}
 
       <ModalActualizarFechas
         abierto={reprogramando}

@@ -189,8 +189,13 @@ function CampoFijo({ label, valor }) {
   )
 }
 
-export default function Gestiones() {
+/**
+ * Paso 4. Con `items` (las REF. WH del Warehouse Virtual) arma una sola salida
+ * consolidada en vez de listar los despachos de las OC.
+ */
+export default function Gestiones({ items, onProcesado }) {
   const { ordenes, avisar } = useOc()
+  const wh = !!items
   const [tab, setTab] = useState('factura')
   const [panel, setPanel] = useState(null)
   const [sel, setSel] = useState(() => new Set())
@@ -200,6 +205,7 @@ export default function Gestiones() {
 
   // Los despachos ya programados son los que necesitan gestión aduanera.
   const despachos = useMemo(() => {
+    if (items) return items
     const out = []
     ordenes
       .filter((oc) => oc.activa)
@@ -219,28 +225,32 @@ export default function Gestiones() {
         }),
       )
     return out
-  }, [ordenes])
+  }, [ordenes, items])
 
   // Una gestión solo puede cubrir despachos de la misma OC y por la misma ruta:
   // comparten factura, BL y trámite aduanero. Por eso el grupo es OC + ruta.
+  // Un consolidado WH mezcla OC a propósito: ahí todo es un solo grupo.
+  const claveGrupo = (d) => (wh ? 'wh' : d.oc.id + '|' + d.ruta.id)
   const grupos = useMemo(() => {
     const m = new Map()
     despachos.forEach((d) => {
-      const clave = d.oc.id + '|' + d.ruta.id
+      const clave = claveGrupo(d)
       if (!m.has(clave)) m.set(clave, { clave, oc: d.oc, ruta: d.ruta, items: [] })
       m.get(clave).items.push(d)
     })
     return [...m.values()]
-  }, [despachos])
+  }, [despachos]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Siempre hay al menos uno seleccionado: la pantalla no tiene estado vacío útil.
+  // En WH arrancan todas las REF marcadas: se prepararon juntas para salir juntas.
   useEffect(() => {
-    if (!sel.size && despachos.length) setSel(new Set([despachos[0].clave]))
-  }, [despachos, sel.size])
+    if (!sel.size && despachos.length)
+      setSel(new Set(wh ? despachos.map((d) => d.clave) : [despachos[0].clave]))
+  }, [despachos, sel.size, wh])
 
   const seleccionadas = despachos.filter((d) => sel.has(d.clave))
   const fila = seleccionadas[0] ?? despachos[0] ?? null
-  const grupoActivo = fila ? fila.oc.id + '|' + fila.ruta.id : null
+  const grupoActivo = fila ? claveGrupo(fila) : null
   const cantidadTotal = seleccionadas.reduce((a, d) => a + d.despacho.cantidad, 0)
 
   const g = (fila && datos[fila.clave]) || GESTION_VACIA
@@ -261,7 +271,7 @@ export default function Gestiones() {
   // Marcar algo de otro grupo reemplaza la selección: nunca se mezclan OC ni rutas.
   const alternar = (d) =>
     setSel((prev) => {
-      if (d.oc.id + '|' + d.ruta.id !== grupoActivo) return new Set([d.clave])
+      if (claveGrupo(d) !== grupoActivo) return new Set([d.clave])
       const s = new Set(prev)
       if (s.has(d.clave)) {
         if (s.size === 1) return prev
@@ -337,12 +347,13 @@ export default function Gestiones() {
         {/* ------------------------------- izquierda ------------------------------ */}
         <div className="flex flex-col gap-4">
           <PanelPlegable
-            titulo="Despachos"
+            titulo={wh ? 'REF. WH' : 'Despachos'}
             extra={<span className="num text-xs text-ink-3">{despachos.length}</span>}
           >
             <p className="border-b border-line bg-surface-2 px-3 py-2 text-sm text-ink-3">
-              Se pueden marcar varios despachos, siempre que sean de la misma OC y por la misma
-              ruta. Marcar uno de otro grupo reemplaza la selección.
+              {wh
+                ? 'Las referencias preparadas en el Warehouse salen en una sola instrucción consolidada.'
+                : 'Se pueden marcar varios despachos, siempre que sean de la misma OC y por la misma ruta. Marcar uno de otro grupo reemplaza la selección.'}
             </p>
             <ul className="tabla-scroll m-0 list-none p-0">
               {grupos.map((grupo) => {
@@ -383,7 +394,7 @@ export default function Gestiones() {
                               activo ? 'text-navy-800' : 'text-ink-3',
                             )}
                           >
-                            OC {oc.id}
+                            {wh ? 'Consolidado WH' : `OC ${oc.id}`}
                           </span>
                           {/* La ruta es parte de la identidad del grupo: no se pueden mezclar */}
                           <span className="block truncate text-xs text-ink-3">
@@ -444,8 +455,9 @@ export default function Gestiones() {
                                   {d.despacho.id}
                                 </span>
                                 <span className="block truncate text-sm text-ink-3">
-                                  {fmtNum(d.despacho.cantidad)} {d.material?.unidad} ·{' '}
-                                  {d.etd ? fmtFechaCorta(d.etd) : '—'}
+                                  {wh
+                                    ? `OC ${d.oc.id} · ${d.material?.nombre ?? ''}`
+                                    : `${fmtNum(d.despacho.cantidad)} ${d.material?.unidad ?? ''} · ${d.etd ? fmtFechaCorta(d.etd) : '—'}`}
                                 </span>
                               </button>
                               <span
@@ -643,7 +655,7 @@ export default function Gestiones() {
               Extracción de {tab === 'factura' ? 'factura' : 'BL'}
             </span>
             <span className="ml-auto text-sm text-ink-3">
-              {fila.oc.id} ·{' '}
+              {wh ? 'Consolidado' : fila.oc.id} ·{' '}
               <b className="font-bold text-ink">
                 {seleccionadas.map((d) => d.despacho.id).join(', ')}
               </b>
@@ -937,13 +949,16 @@ export default function Gestiones() {
             <Button
               variant="primary"
               disabled={!listo}
-              onClick={() =>
+              onClick={() => {
                 avisar(
-                  `Instrucción de embarque creada para la OC ${fila.oc.id} · despacho${seleccionadas.length === 1 ? '' : 's'} ${seleccionadas.map((d) => d.despacho.id).join(', ')}.`,
+                  wh
+                    ? `Instrucción de salida creada para ${seleccionadas.map((d) => d.despacho.id).join(', ')}. Ya aparece en Control Tower.`
+                    : `Instrucción de embarque creada para la OC ${fila.oc.id} · despacho${seleccionadas.length === 1 ? '' : 's'} ${seleccionadas.map((d) => d.despacho.id).join(', ')}.`,
                   'ok',
                   { destacado: true },
                 )
-              }
+                onProcesado?.(seleccionadas)
+              }}
             >
               Procesar despacho
             </Button>
