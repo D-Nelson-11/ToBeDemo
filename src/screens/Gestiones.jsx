@@ -17,6 +17,7 @@ import {
 } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
 import PanelPlegable from '../components/ui/PanelPlegable'
+import TipoOperacion, { OPERACION_VACIA } from '../components/TipoOperacion'
 import { Field, Input, Select, Textarea } from '../components/ui/Field'
 import { useOc } from '../data/store'
 import { INCOTERMS, MONEDAS, REGIMENES, RUTAS } from '../data/catalogos'
@@ -69,6 +70,7 @@ const GESTION_VACIA = {
   instrucciones: '',
   observaciones: '',
   regimen: '',
+  operacion: OPERACION_VACIA,
 }
 
 const uid = () => Math.random().toString(36).slice(2)
@@ -324,7 +326,14 @@ export default function Gestiones() {
 
   return (
     <div className="min-h-full">
-      <div className="contenedor grid grid-cols-1 items-start gap-4 py-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="contenedor pt-5">
+        <TipoOperacion
+          op={g.operacion}
+          onChange={(operacion) => setG({ operacion })}
+          referencia={`${fila.oc.id.slice(-5)}-${fila.despacho.id}`}
+        />
+      </div>
+      <div className="contenedor grid grid-cols-1 items-start gap-4 py-5 lg:grid-cols-[272px_minmax(0,1fr)]">
         {/* ------------------------------- izquierda ------------------------------ */}
         <div className="flex flex-col gap-4">
           <PanelPlegable

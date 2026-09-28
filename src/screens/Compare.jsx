@@ -4,8 +4,6 @@ import {
   LuCircleCheck,
   LuFileDiff,
   LuFileText,
-  LuLoaderCircle,
-  LuPlay,
   LuRotateCcw,
   LuSparkles,
   LuTriangleAlert,
@@ -14,13 +12,8 @@ import {
 import Button, { cx } from '../components/ui/Button'
 import Panel from '../components/ui/Panel'
 import PanelPlegable from '../components/ui/PanelPlegable'
-
-// Simulación: nada sale del navegador. Los PDFs solo se muestran por nombre y
-// las observaciones son siempre las mismas, inventadas.
-const EJEMPLO = {
-  a: 'Factura_INV-2026-0418.pdf',
-  b: 'BL_MAEU-238817450.pdf',
-}
+import { NIVELES_COMPARE, compararEmbarque } from '../lib/compare'
+import { fmtFechaHora } from '../lib/fechas'
 
 const PASOS_IA = [
   'Leyendo la factura…',
@@ -28,69 +21,28 @@ const PASOS_IA = [
   'Comparando campos según las instrucciones…',
 ]
 
-const OBSERVACIONES = [
-  {
-    tono: 'rojo',
-    campo: 'Peso bruto',
-    a: '18.450 kg',
-    b: '18.920 kg',
-    texto: 'Diferencia de 470 kg (2,5 %), supera la tolerancia del 1 %.',
+export const TONO_COMPARE = {
+  rojo: {
+    icono: LuCircleAlert,
+    rotulo: 'Crítica',
+    chip: 'bg-rojo-50 text-rojo-700 border-rojo-100',
+    aviso: 'border-rojo-100 bg-rojo-50 text-rojo-700',
+    texto: 'text-rojo-600',
   },
-  {
-    tono: 'rojo',
-    campo: 'Consignatario',
-    a: 'Distribuidora Vesta S.A.',
-    b: 'Distribuidora Vesta SA de CV',
-    texto: 'La razón social no coincide; puede trabar la liberación en aduana.',
+  alerta: {
+    icono: LuTriangleAlert,
+    rotulo: 'Revisar',
+    chip: 'bg-ambar-50 text-ambar-700 border-ambar-100',
+    aviso: 'border-ambar-100 bg-ambar-50 text-ambar-700',
+    texto: 'text-ambar-600',
   },
-  {
-    tono: 'alerta',
-    campo: 'Cantidad de bultos',
-    a: '1.200 cajas',
-    b: '1.180 cartons',
-    texto: 'Faltan 20 bultos en el BL. Confirmar con el proveedor si hubo carga parcial.',
+  ok: {
+    icono: LuCircleCheck,
+    rotulo: 'Coincide',
+    chip: 'bg-teal-50 text-teal-700 border-teal-100',
+    aviso: 'border-teal-100 bg-teal-50 text-teal-700',
+    texto: 'text-teal-600',
   },
-  {
-    tono: 'alerta',
-    campo: 'Puerto de carga',
-    a: 'Callao',
-    b: 'Paita',
-    texto: 'El puerto de embarque cambió respecto de lo facturado.',
-  },
-  {
-    tono: 'alerta',
-    campo: 'Descripción de la mercancía',
-    a: 'Papas fritas sabor original 45 g',
-    b: 'Snacks',
-    texto: 'El BL usa una descripción genérica; aduana puede pedir el detalle.',
-  },
-  {
-    tono: 'ok',
-    campo: 'Contenedor',
-    a: 'MSKU 482193-7',
-    b: 'MSKU 482193-7',
-    texto: 'Coincide.',
-  },
-  {
-    tono: 'ok',
-    campo: 'Orden de compra',
-    a: 'OC-45120087',
-    b: 'OC-45120087',
-    texto: 'Coincide.',
-  },
-  {
-    tono: 'ok',
-    campo: 'Shipper',
-    a: 'Snacks Andinos S.A.C.',
-    b: 'Snacks Andinos S.A.C.',
-    texto: 'Coincide.',
-  },
-]
-
-const TONO = {
-  rojo: { icono: LuCircleAlert, rotulo: 'Crítica', chip: 'bg-rojo-50 text-rojo-700 border-rojo-100' },
-  alerta: { icono: LuTriangleAlert, rotulo: 'Revisar', chip: 'bg-ambar-50 text-ambar-700 border-ambar-100' },
-  ok: { icono: LuCircleCheck, rotulo: 'Coincide', chip: 'bg-teal-50 text-teal-700 border-teal-100' },
 }
 
 /** Tarjeta de un archivo: muestra el PDF cargado y deja elegir otro. */
@@ -122,12 +74,14 @@ function Archivo({ letra, tipo, nombre, onElegir, bloqueado }) {
   )
 }
 
-export default function Compare() {
-  const [archivos, setArchivos] = useState(EJEMPLO)
-  // null = sin correr, número = paso de la IA en curso, 'listo' = con resultado
-  const [estado, setEstado] = useState(null)
+/** Resultado de la comparación factura vs BL. Ya viene escaneado desde el paso 4; se puede volver a correr. */
+export default function Compare({ embarque }) {
+  const [resultado] = useState(() => compararEmbarque(embarque))
+  const [archivos, setArchivos] = useState(resultado.archivos)
+  // 'listo' = mostrando el resultado; número = paso de la IA en curso al re-escanear.
+  const [estado, setEstado] = useState('listo')
 
-  // Avanza un paso cada 900 ms; al pasar el último, muestra el resultado.
+  // Avanza un paso cada 900 ms; al pasar el último, vuelve al resultado.
   useEffect(() => {
     if (typeof estado !== 'number') return
     const t = setTimeout(() => setEstado(estado + 1 < PASOS_IA.length ? estado + 1 : 'listo'), 900)
@@ -135,12 +89,32 @@ export default function Compare() {
   }, [estado])
 
   const corriendo = typeof estado === 'number'
-  const cuenta = (tono) => OBSERVACIONES.filter((o) => o.tono === tono).length
+  const cuenta = (tono) => resultado.observaciones.filter((o) => o.tono === tono).length
+  const nivel = TONO_COMPARE[resultado.nivel]
+  const reescanear = () => setEstado(0)
 
   return (
     <>
+      {!corriendo && (
+        <div className={cx('flex flex-wrap items-center gap-3 rounded-md border px-4 py-3', nivel.aviso)}>
+          <nivel.icono size={22} className="shrink-0" />
+          <div className="min-w-0 flex-1">
+            <b className="block text-base font-bold">
+              {NIVELES_COMPARE[resultado.nivel].rotulo}
+              {resultado.diferencias > 0 &&
+                ` · ${resultado.diferencias} diferencia${resultado.diferencias === 1 ? '' : 's'}`}
+            </b>
+            <span className="block text-sm">{NIVELES_COMPARE[resultado.nivel].texto}</span>
+          </div>
+          <span className="text-xs">
+            Escaneado al cargar la factura (paso 4) ·{' '}
+            <span className="num font-bold">{fmtFechaHora(resultado.escaneado)}</span>
+          </span>
+        </div>
+      )}
+
       <Panel
-        titulo="Documentos a comparar"
+        titulo="Documentos comparados"
         icono={LuFileDiff}
         sub="La IA compara la factura contra el BL y devuelve las diferencias"
       >
@@ -150,26 +124,26 @@ export default function Compare() {
             tipo="Factura comercial"
             nombre={archivos.a}
             bloqueado={corriendo}
-            onElegir={(n) => setArchivos((p) => ({ ...p, a: n }))}
+            onElegir={(n) => {
+              setArchivos((p) => ({ ...p, a: n }))
+              reescanear()
+            }}
           />
           <Archivo
             letra="B"
             tipo="Bill of Lading (BL)"
             nombre={archivos.b}
             bloqueado={corriendo}
-            onElegir={(n) => setArchivos((p) => ({ ...p, b: n }))}
+            onElegir={(n) => {
+              setArchivos((p) => ({ ...p, b: n }))
+              reescanear()
+            }}
           />
         </div>
 
-        <div className="mt-4 flex items-center justify-end gap-2">
-          {estado === 'listo' && (
-            <Button variant="quiet" onClick={() => setEstado(null)}>
-              <LuRotateCcw /> Limpiar
-            </Button>
-          )}
-          <Button variant="primary" onClick={() => setEstado(0)} disabled={corriendo}>
-            {corriendo ? <LuLoaderCircle className="motion-safe:animate-spin" /> : <LuPlay />}
-            {corriendo ? 'Ejecutando…' : 'Ejecutar comparación'}
+        <div className="mt-4 flex items-center justify-end">
+          <Button onClick={reescanear} disabled={corriendo}>
+            <LuRotateCcw /> Volver a escanear
           </Button>
         </div>
       </Panel>
@@ -189,7 +163,7 @@ export default function Compare() {
         </Panel>
       )}
 
-      {estado === 'listo' && (
+      {!corriendo && (
         <PanelPlegable
           titulo={
             <>
@@ -199,7 +173,7 @@ export default function Compare() {
         >
           <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
             {['rojo', 'alerta', 'ok'].map((t) => {
-              const { icono: Icono, rotulo, chip } = TONO[t]
+              const { icono: Icono, rotulo, chip } = TONO_COMPARE[t]
               return (
                 <span key={t} className={cx('flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-bold', chip)}>
                   <Icono size={14} /> {cuenta(t)} {rotulo}
@@ -223,8 +197,8 @@ export default function Compare() {
                 </tr>
               </thead>
               <tbody>
-                {OBSERVACIONES.map((o) => {
-                  const { icono: Icono, rotulo, chip } = TONO[o.tono]
+                {resultado.observaciones.map((o) => {
+                  const { icono: Icono, rotulo, chip } = TONO_COMPARE[o.tono]
                   return (
                     <tr key={o.campo}>
                       <td>

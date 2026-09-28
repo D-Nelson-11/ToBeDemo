@@ -1,10 +1,12 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  LuArrowLeftRight,
   LuBanknote,
   LuBellRing,
   LuCircleCheck,
   LuContainer,
   LuEllipsis,
+  LuFileDiff,
   LuFileCheck,
   LuHandshake,
   LuMail,
@@ -23,8 +25,11 @@ import BitacoraAduana from '../components/BitacoraAduana'
 import CostosLogisticos from './CostosLogisticos'
 import LiberacionDocumentos from './LiberacionDocumentos'
 import MerchantCarrier from './MerchantCarrier'
+import Compare, { TONO_COMPARE } from './Compare'
+import { NIVELES_COMPARE, compararEmbarque } from '../lib/compare'
+import ControlFyduca from './ControlFyduca'
 import ModalColaCorreo from './ModalColaCorreo'
-import DetalleTransito from '../components/DetalleTransito'
+import DetalleTransito, { ICONO_MODALIDAD } from '../components/DetalleTransito'
 import RielAduana from '../components/RielAduana'
 import RielTransito from '../components/RielTransito'
 import { useOc } from '../data/store'
@@ -42,6 +47,8 @@ import {
   requisitosDestino,
 } from '../lib/torre'
 import { construirMerchant } from '../lib/merchant'
+import { construirFyducas } from '../lib/fyduca'
+import { ESTADO_LISTA } from '../data/fyducas'
 import { fmtFechaCorta, fmtNum } from '../lib/fechas'
 
 const ICONO_SEGMENTO = {
@@ -56,10 +63,21 @@ const ICONO_SEGMENTO = {
   Alertas: LuBellRing,
   Documentos: LuFileCheck,
   'Merchant/Carrier': LuHandshake,
+  FYDUCAs: LuArrowLeftRight,
 }
 
 // Tabs que no listan embarques: son pantallas propias al final de la barra.
 const PAGINAS = ['Costos', 'Alertas', 'Documentos', 'Merchant/Carrier']
+
+const MODALIDADES = ['Marítimo', 'Aéreo', 'Terrestre']
+
+// Terrestre no pasa por puerto ni coordina con Merchant/Carrier.
+const TABS_OCULTOS = { Terrestre: ['Port of Loading', 'Merchant/Carrier'] }
+
+// FYDUCA es el documento del corredor terrestre centroamericano: solo existe en Terrestre.
+const PAGINAS_EXTRA = { Terrestre: ['FYDUCAs'] }
+
+const ROTULO_TAB = { Aéreo: { 'Port of Loading': 'Airport of Loading' } }
 
 const TONO_RIESGO = {
   'Dentro de tiempo': { chip: 'bg-teal-50 text-teal-700', punto: 'bg-teal-600', texto: 'text-teal-700', lomo: 'var(--color-teal-600)' },
@@ -105,9 +123,34 @@ function BarraReq({ items }) {
   )
 }
 
+/** Semáforo del escaneo factura vs BL del paso 4: se ve sin abrir la comparación. */
+function BotonCompare({ embarque, onClick }) {
+  const { nivel, diferencias } = compararEmbarque(embarque)
+  return (
+    <button
+      className="ico relative"
+      title={`Factura vs BL · ${NIVELES_COMPARE[nivel].rotulo}${diferencias ? ` (${diferencias})` : ''}`}
+      onClick={onClick}
+    >
+      <LuFileDiff size={15} className={TONO_COMPARE[nivel].texto} />
+      {diferencias > 0 && (
+        <span
+          className={cx(
+            'num absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-3xs font-bold text-white',
+            nivel === 'rojo' ? 'bg-rojo-600' : 'bg-ambar-500',
+          )}
+        >
+          {diferencias}
+        </span>
+      )}
+    </button>
+  )
+}
+
 export default function Torre() {
-  const { ordenes, recolectas, coordinaciones, finiquitos, avisar } = useOc()
+  const { ordenes, recolectas, coordinaciones, finiquitos, avancesFyduca, avisar } = useOc()
   const [segmento, setSegmento] = useState('All')
+  const [modalidad, setModalidad] = useState('Marítimo')
   const [sitio, setSitio] = useState('')
   const [riesgo, setRiesgo] = useState('')
   const [q, setQ] = useState('')
@@ -115,6 +158,8 @@ export default function Torre() {
   const [detalle, setDetalle] = useState(null)
   // Embarque cuya cola de correo (correo de asignación a la agencia) se está viendo.
   const [cola, setCola] = useState(null)
+  // Embarque cuya factura se está comparando contra su BL con OCR.
+  const [comparar, setComparar] = useState(null)
   const enTramite = detalle?.segmento === 'Customs Clearance'
   const enTransito = detalle?.segmento === 'International Transit'
 
@@ -142,6 +187,8 @@ export default function Torre() {
     () => construirMerchant(embarques, coordinaciones, finiquitos),
     [embarques, coordinaciones, finiquitos],
   )
+
+  const fyducas = useMemo(() => construirFyducas(avancesFyduca), [avancesFyduca])
 
   const sitios = useMemo(() => [...new Set(embarques.map((e) => e.sitio))], [embarques])
 
@@ -172,7 +219,19 @@ export default function Torre() {
 
   const alertasFiltradas = alertas.filter((a) => !nivelFiltro || String(a.nivel) === nivelFiltro)
 
-  const esPagina = PAGINAS.includes(segmento)
+  const extras = PAGINAS_EXTRA[modalidad] ?? []
+  const esPagina = PAGINAS.includes(segmento) || extras.includes(segmento)
+
+  const ocultos = TABS_OCULTOS[modalidad] ?? []
+  const tabs = [...SEGMENTOS, ...PAGINAS, ...extras].filter((s) => !ocultos.includes(s))
+  const rotuloTab = (s) => ROTULO_TAB[modalidad]?.[s] ?? s
+
+  const cambiarModalidad = (m) => {
+    setModalidad(m)
+    // Si el tab abierto desaparece en la nueva modalidad, la tabla quedaría huérfana.
+    const sigue = [...SEGMENTOS, ...PAGINAS, ...(PAGINAS_EXTRA[m] ?? [])]
+    if (TABS_OCULTOS[m]?.includes(segmento) || !sigue.includes(segmento)) setSegmento('All')
+  }
 
   // El contador de cada página es lo que hay por atender, no el total.
   const contadorPagina = {
@@ -182,15 +241,26 @@ export default function Torre() {
     // Lo accionable acá es lo que espera fecha o revisión, no todo el pipeline.
     'Merchant/Carrier':
       merchant.precoordinacion.length + merchant.liberados.length + merchant.recibidas.length,
+    FYDUCAs: fyducas.filter((o) => o.estado !== ESTADO_LISTA).length,
   }
 
   return (
     <div className="min-h-full">
       <div className="contenedor flex flex-col gap-4 py-4">
+        <div className="flex items-center gap-2">
+          <span className="lbl">Modalidad</span>
+          <Select
+            options={MODALIDADES}
+            value={modalidad}
+            onChange={(e) => cambiarModalidad(e.target.value)}
+            className="w-[160px]"
+          />
+        </div>
+
         {/* Segmentos del viaje: son el eje de toda la torre */}
         <div ref={tabbar} className="tabbar">
-          {[...SEGMENTOS, ...PAGINAS].map((s) => {
-            const Icono = ICONO_SEGMENTO[s]
+          {tabs.map((s) => {
+            const Icono = s === 'International Transit' ? ICONO_MODALIDAD[modalidad] : ICONO_SEGMENTO[s]
             const activo = segmento === s
             const n = contadorPagina[s] ?? conteoSegmento[s]
             return (
@@ -199,7 +269,7 @@ export default function Torre() {
                 {s === PAGINAS[0] && <span className="my-2 w-px shrink-0 bg-line" />}
                 <button onClick={() => setSegmento(s)} className={cx('tab', activo && 'tab-on')}>
                   <Icono size={14} className={activo ? 'text-navy-700' : 'text-ink-4'} />
-                  {s}
+                  {rotuloTab(s)}
                   <span className="tab-n">{n}</span>
                 </button>
               </Fragment>
@@ -224,7 +294,7 @@ export default function Torre() {
         {!esPagina && (
           <>
             <PanelPlegable
-              titulo={<>Embarques — {segmento === 'All' ? 'todos los segmentos' : segmento}</>}
+              titulo={<>Embarques — {segmento === 'All' ? 'todos los segmentos' : rotuloTab(segmento)}</>}
               acciones={
                 <div className="flex flex-wrap items-center gap-2">
                   <Select
@@ -266,7 +336,7 @@ export default function Torre() {
                       <th className="w-[100px] text-right!">Desviación</th>
                       <th className="w-[120px]">Actualizado</th>
                       <th className="w-[140px]">Riesgo</th>
-                      <th className="w-[86px]" />
+                      <th className="w-[120px]" />
                     </tr>
                   </thead>
                   <tbody>
@@ -283,7 +353,7 @@ export default function Torre() {
                         <tr key={e.clave} style={{ '--spine': tono.lomo }}>
                           <td className="cell-key">{e.id}</td>
                           <td>{e.transporte}</td>
-                          <td className="cell-strong">{e.segmento}</td>
+                          <td className="cell-strong">{rotuloTab(e.segmento)}</td>
                           <td className="cell-cut" title={e.ubicacion}>
                             <span className="flex items-center gap-1.5">
                               <LuMapPin size={12} className="shrink-0 text-ink-4" />
@@ -325,6 +395,7 @@ export default function Torre() {
                               >
                                 <LuMail size={15} />
                               </button>
+                              <BotonCompare embarque={e} onClick={() => setComparar(e)} />
                               <button
                                 className="ico"
                                 title="Ver detalle del embarque"
@@ -474,6 +545,9 @@ export default function Torre() {
         {/* --------------------------- MERCHANT / CARRIER -------------------------- */}
         {segmento === 'Merchant/Carrier' && <MerchantCarrier embarques={embarques} />}
 
+        {/* ------------------------------- FYDUCAS -------------------------------- */}
+        {segmento === 'FYDUCAs' && <ControlFyduca />}
+
         {/* ------------------------------- ALERTAS -------------------------------- */}
         {segmento === 'Alertas' && (
           <div className="panel">
@@ -556,7 +630,7 @@ export default function Torre() {
         }
       >
         {detalle && enTramite && <BitacoraAduana embarque={detalle} />}
-        {detalle && enTransito && <DetalleTransito embarque={detalle} />}
+        {detalle && enTransito && <DetalleTransito embarque={detalle} modalidad={modalidad} />}
 
         {detalle && !enTramite && !enTransito && (
           <div className="flex flex-col gap-4">
@@ -607,6 +681,26 @@ export default function Torre() {
       </Modal>
 
       <ModalColaCorreo embarque={cola} onClose={() => setCola(null)} />
+
+      <Modal
+        open={!!comparar}
+        onClose={() => setComparar(null)}
+        size="lg"
+        eyebrow={comparar ? `${comparar.oc.proveedor} · ${comparar.transporte}` : ''}
+        title={comparar ? `Compare · embarque ${comparar.id}` : ''}
+        footer={
+          <Button variant="quiet" onClick={() => setComparar(null)}>
+            Cerrar
+          </Button>
+        }
+      >
+        {/* key: cada embarque arranca su propia comparación, sin arrastrar la anterior */}
+        {comparar && (
+          <div className="flex flex-col gap-4">
+            <Compare key={comparar.clave} embarque={comparar} />
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

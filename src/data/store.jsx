@@ -120,6 +120,8 @@ export function OcProvider({ children }) {
   // las recolectas: es estado de la torre, no de la OC ni del despacho.
   const [coordinaciones, setCoordinaciones] = useState({})
   const [finiquitos, setFiniquitos] = useState({})
+  // Hitos FYDUCA cumplidos en la demo, por operación: se suman a los del mock.
+  const [avancesFyduca, setAvancesFyduca] = useState({})
   const envios = useRef({})
   const nextId = useRef(1)
 
@@ -179,6 +181,10 @@ export function OcProvider({ children }) {
     setFiniquitos((f) => ({ ...f, [clave]: estatus }))
   }, [])
 
+  const avanzarFyduca = useCallback((id) => {
+    setAvancesFyduca((a) => ({ ...a, [id]: [...(a[id] ?? []), new Date()] }))
+  }, [])
+
   const value = useMemo(
     () => ({
       ordenes,
@@ -190,6 +196,8 @@ export function OcProvider({ children }) {
       coordinarEntrega,
       finiquitos,
       avanzarFiniquito,
+      avancesFyduca,
+      avanzarFyduca,
       vista,
       setVista,
       cargando,
@@ -224,6 +232,8 @@ export function OcProvider({ children }) {
       coordinarEntrega,
       finiquitos,
       avanzarFiniquito,
+      avancesFyduca,
+      avanzarFyduca,
     ],
   )
 

@@ -1,4 +1,4 @@
-import { LuBellPlus, LuTriangleAlert } from 'react-icons/lu'
+import { LuBellPlus, LuPlane, LuShip, LuTriangleAlert, LuTruck } from 'react-icons/lu'
 import Button, { cx } from './ui/Button'
 import { fmtFechaCorta } from '../lib/fechas'
 import { NIVELES, nivelDe } from '../lib/torre'
@@ -16,9 +16,13 @@ const RECOMENDACION = {
 // No se mueven con los datos; la posición real llegaría de AIS/TMS.
 const PINES = [
   { left: '15%', top: '55%', color: 'bg-teal-600', rotulo: 'Origen' },
-  { left: '48%', top: '38%', color: 'bg-ambar-500', rotulo: 'Posición estimada' },
   { left: '77%', top: '58%', color: 'bg-rojo-600', rotulo: 'Destino' },
 ]
+const POSICION = { left: '48%', top: '38%' }
+
+export const ICONO_MODALIDAD = { Marítimo: LuShip, Aéreo: LuPlane, Terrestre: LuTruck }
+
+const VEHICULO = { Marítimo: 'barco', Aéreo: 'avión', Terrestre: 'camión' }
 
 const FONDO_MAPA = [
   'linear-gradient(25deg,transparent 48%,#d5c79d 49%,#d5c79d 50%,transparent 51%)',
@@ -53,7 +57,8 @@ function Paso({ titulo, nota, estado }) {
 }
 
 /** Detalle del embarque en tránsito: ubicación, proyección y línea de tiempo. */
-export default function DetalleTransito({ embarque: e }) {
+export default function DetalleTransito({ embarque: e, modalidad = 'Marítimo' }) {
+  const Vehiculo = ICONO_MODALIDAD[modalidad]
   const { avisar } = useOc()
   const nivel = nivelDe(e.delay)
   const desviacion = e.delay > 0 ? `+${e.delay} d` : '0 d'
@@ -76,7 +81,7 @@ export default function DetalleTransito({ embarque: e }) {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_.8fr]">
         <div className="panel p-4">
-          <div className="lbl mb-2">Ruta / ubicación del barco</div>
+          <div className="lbl mb-2">Ruta / ubicación del {VEHICULO[modalidad]}</div>
           <div className="relative h-[200px] rounded-sm" style={{ background: FONDO_MAPA }}>
             {PINES.map((p) => (
               <span
@@ -89,9 +94,16 @@ export default function DetalleTransito({ embarque: e }) {
                 )}
               />
             ))}
+            <span
+              title="Posición estimada"
+              style={POSICION}
+              className="absolute flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-ambar-500 text-white shadow"
+            >
+              <Vehiculo size={16} />
+            </span>
           </div>
           <p className="mt-2 mb-0 text-xs text-ink-4">
-            Vista esquemática. En una integración real se conectará AIS/TMS para la posición del barco.
+            Vista esquemática. En una integración real se conectará AIS/TMS para la posición del {VEHICULO[modalidad]}.
           </p>
         </div>
 

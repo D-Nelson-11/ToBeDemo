@@ -8,10 +8,10 @@ import {
   LuChevronDown,
   LuCircleAlert,
   LuCircleCheck,
-  LuFileDiff,
   LuGauge,
   LuLoaderCircle,
   LuLogOut,
+  LuMail,
   LuPackageCheck,
   LuPanelLeftClose,
   LuPanelLeftOpen,
@@ -23,6 +23,7 @@ import {
 } from 'react-icons/lu'
 import logoVesta from '../assets/logo-vesta.png'
 import { useOc } from '../data/store'
+import ChatBot from './ChatBot'
 import { cx } from './ui/Button'
 
 export const PASOS = [
@@ -59,12 +60,12 @@ export const MODULOS = [
     rutas: ['/kpi'],
   },
   {
-    id: 'compare',
-    titulo: 'Compare',
-    sub: 'Comparar archivos',
-    icono: LuFileDiff,
-    to: '/compare',
-    rutas: ['/compare'],
+    id: 'correo',
+    titulo: 'Correo',
+    sub: 'Bandeja de entrada',
+    icono: LuMail,
+    to: '/correo',
+    rutas: ['/correo'],
   },
 ]
 
@@ -559,6 +560,7 @@ export default function Shell() {
       </div>
 
       {cargando && <ToastCarga mensaje={cargando} />}
+      <ChatBot />
     </div>
   )
 }
