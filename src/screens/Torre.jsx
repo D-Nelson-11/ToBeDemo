@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  LuArrowLeftRight,
+  LuClipboardList,
   LuBanknote,
   LuBellRing,
   LuCircleCheck,
@@ -48,8 +48,7 @@ import {
   requisitosDestino,
 } from '../lib/torre'
 import { construirMerchant } from '../lib/merchant'
-import { construirFyducas } from '../lib/fyduca'
-import { ESTADO_LISTA } from '../data/fyducas'
+import { construirFyducas, fyducaTorre } from '../lib/fyduca'
 import { barcosTorre } from '../data/barcos'
 import { fmtFechaCorta, fmtNum } from '../lib/fechas'
 
@@ -65,19 +64,21 @@ const ICONO_SEGMENTO = {
   Alertas: LuBellRing,
   Documentos: LuFileCheck,
   'Merchant/Carrier': LuHandshake,
-  FYDUCAs: LuArrowLeftRight,
 }
 
 // Tabs que no listan embarques: son pantallas propias al final de la barra.
 const PAGINAS = ['Costos', 'Alertas', 'Documentos', 'Merchant/Carrier']
 
-const MODALIDADES = ['Marítimo', 'Aéreo', 'Terrestre']
+const MODALIDADES = ['Marítimo', 'Aéreo', 'Terrestre', 'FYDUCA']
 
 // Terrestre no pasa por puerto ni coordina con Merchant/Carrier.
 const TABS_OCULTOS = { Terrestre: ['Port of Loading', 'Merchant/Carrier'] }
 
-// FYDUCA es el documento del corredor terrestre centroamericano: solo existe en Terrestre.
-const PAGINAS_EXTRA = { Terrestre: ['FYDUCAs'] }
+// Modalidades con barra propia: solo estos tabs, sin las páginas de costos, alertas, etc.
+const TABS_SOLO = { FYDUCA: ['All', 'Origin', 'International Transit', 'At Plant'] }
+
+const tabsDe = (m) =>
+  TABS_SOLO[m] ?? [...SEGMENTOS, ...PAGINAS].filter((s) => !(TABS_OCULTOS[m] ?? []).includes(s))
 
 const ROTULO_TAB = { Aéreo: { 'Port of Loading': 'Airport of Loading' } }
 
@@ -162,6 +163,7 @@ export default function Torre() {
   const [cola, setCola] = useState(null)
   // Embarque cuya factura se está comparando contra su BL con OCR.
   const [comparar, setComparar] = useState(null)
+  const [verFyduca, setVerFyduca] = useState(false)
   const enTramite = detalle?.segmento === 'Customs Clearance'
   const enTransito = detalle?.segmento === 'International Transit'
 
@@ -184,10 +186,14 @@ export default function Torre() {
   const navigate = useNavigate()
   // Los barcos a granel no nacen de una OC del flujo: se suman a la torre como un embarque más.
   const barcos = useMemo(() => barcosTorre(), [])
-  const embarques = useMemo(
-    () => construirEmbarques([...ordenes, ...salidasWh, ...barcos]),
-    [ordenes, salidasWh, barcos],
+  const fyducas = useMemo(() => construirFyducas(avancesFyduca), [avancesFyduca])
+  const todos = useMemo(
+    () => construirEmbarques([...ordenes, ...salidasWh, ...barcos, ...fyducaTorre(fyducas)]),
+    [ordenes, salidasWh, barcos, fyducas],
   )
+  // El control FYDUCA solo vive en su modalidad; el resto de la torre (costos, documentos…) no lo cuenta.
+  const embarques = useMemo(() => todos.filter((e) => e.transporte !== 'FYDUCA'), [todos])
+  const base = modalidad === 'FYDUCA' ? todos.filter((e) => e.transporte === 'FYDUCA') : embarques
   const costos = useMemo(() => construirCostos(embarques), [embarques])
   const alertas = useMemo(() => construirAlertas(embarques), [embarques])
   const documentos = useMemo(() => construirDocumentos(embarques, recolectas), [embarques, recolectas])
@@ -196,13 +202,11 @@ export default function Torre() {
     [embarques, coordinaciones, finiquitos],
   )
 
-  const fyducas = useMemo(() => construirFyducas(avancesFyduca), [avancesFyduca])
-
-  const sitios = useMemo(() => [...new Set(embarques.map((e) => e.sitio))], [embarques])
+  const sitios = useMemo(() => [...new Set(base.map((e) => e.sitio))], [base])
 
   const filtrados = useMemo(() => {
     const t = q.toLowerCase().trim()
-    return embarques.filter(
+    return base.filter(
       (e) =>
         (segmento === 'All' || e.segmento === segmento) &&
         (!sitio || e.sitio === sitio) &&
@@ -212,13 +216,13 @@ export default function Torre() {
             .toLowerCase()
             .includes(t)),
     )
-  }, [embarques, segmento, sitio, riesgo, q])
+  }, [base, segmento, sitio, riesgo, q])
 
   const conteoSegmento = useMemo(() => {
-    const c = { All: embarques.length }
-    SEGMENTOS.slice(1).forEach((s) => (c[s] = embarques.filter((e) => e.segmento === s).length))
+    const c = { All: base.length }
+    SEGMENTOS.slice(1).forEach((s) => (c[s] = base.filter((e) => e.segmento === s).length))
     return c
-  }, [embarques])
+  }, [base])
 
   const enAduana = useMemo(
     () => embarques.filter((e) => e.segmento === 'Customs Clearance'),
@@ -227,18 +231,14 @@ export default function Torre() {
 
   const alertasFiltradas = alertas.filter((a) => !nivelFiltro || String(a.nivel) === nivelFiltro)
 
-  const extras = PAGINAS_EXTRA[modalidad] ?? []
-  const esPagina = PAGINAS.includes(segmento) || extras.includes(segmento)
-
-  const ocultos = TABS_OCULTOS[modalidad] ?? []
-  const tabs = [...SEGMENTOS, ...PAGINAS, ...extras].filter((s) => !ocultos.includes(s))
+  const esPagina = PAGINAS.includes(segmento)
+  const tabs = tabsDe(modalidad)
   const rotuloTab = (s) => ROTULO_TAB[modalidad]?.[s] ?? s
 
   const cambiarModalidad = (m) => {
     setModalidad(m)
     // Si el tab abierto desaparece en la nueva modalidad, la tabla quedaría huérfana.
-    const sigue = [...SEGMENTOS, ...PAGINAS, ...(PAGINAS_EXTRA[m] ?? [])]
-    if (TABS_OCULTOS[m]?.includes(segmento) || !sigue.includes(segmento)) setSegmento('All')
+    if (!tabsDe(m).includes(segmento)) setSegmento('All')
   }
 
   // El contador de cada página es lo que hay por atender, no el total.
@@ -249,7 +249,6 @@ export default function Torre() {
     // Lo accionable acá es lo que espera fecha o revisión, no todo el pipeline.
     'Merchant/Carrier':
       merchant.precoordinacion.length + merchant.liberados.length + merchant.recibidas.length,
-    FYDUCAs: fyducas.filter((o) => o.estado !== ESTADO_LISTA).length,
   }
 
   return (
@@ -292,7 +291,7 @@ export default function Torre() {
               <span className={cx('h-2 w-2 rounded-full', TONO_RIESGO[r].punto)} />
               {r}
               <b className={cx('num font-bold', TONO_RIESGO[r].texto)}>
-                {embarques.filter((e) => e.riesgo === r).length}
+                {base.filter((e) => e.riesgo === r).length}
               </b>
             </span>
           ))}
@@ -396,6 +395,15 @@ export default function Torre() {
                           </td>
                           <td>
                             <div className="flex justify-end gap-1">
+                              {e.transporte === 'FYDUCA' && (
+                                <button
+                                  className="ico text-navy-700"
+                                  title="Control FYDUCA · operaciones, pagos y bitácora"
+                                  onClick={() => setVerFyduca(true)}
+                                >
+                                  <LuClipboardList size={15} />
+                                </button>
+                              )}
                               {e.transporte === 'Barco' && (
                                 <button
                                   className="ico text-navy-700"
@@ -562,9 +570,6 @@ export default function Torre() {
         {/* --------------------------- MERCHANT / CARRIER -------------------------- */}
         {segmento === 'Merchant/Carrier' && <MerchantCarrier embarques={embarques} />}
 
-        {/* ------------------------------- FYDUCAS -------------------------------- */}
-        {segmento === 'FYDUCAs' && <ControlFyduca />}
-
         {/* ------------------------------- ALERTAS -------------------------------- */}
         {segmento === 'Alertas' && (
           <div className="panel">
@@ -698,6 +703,16 @@ export default function Torre() {
       </Modal>
 
       <ModalColaCorreo embarque={cola} onClose={() => setCola(null)} />
+
+      <Modal
+        open={verFyduca}
+        onClose={() => setVerFyduca(false)}
+        size="xl"
+        eyebrow="Corredor terrestre centroamericano"
+        title="Control FYDUCA"
+      >
+        {verFyduca && <ControlFyduca />}
+      </Modal>
 
       <Modal
         open={!!comparar}

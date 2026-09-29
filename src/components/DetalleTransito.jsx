@@ -20,7 +20,7 @@ const PINES = [
 ]
 const POSICION = { left: '48%', top: '38%' }
 
-export const ICONO_MODALIDAD = { Marítimo: LuShip, Aéreo: LuPlane, Terrestre: LuTruck }
+export const ICONO_MODALIDAD = { Marítimo: LuShip, Aéreo: LuPlane, Terrestre: LuTruck, FYDUCA: LuTruck }
 
 const VEHICULO = { Marítimo: 'barco', Aéreo: 'avión', Terrestre: 'camión' }
 
