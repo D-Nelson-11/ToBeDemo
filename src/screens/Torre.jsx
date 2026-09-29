@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   LuArrowLeftRight,
   LuBanknote,
@@ -49,6 +50,7 @@ import {
 import { construirMerchant } from '../lib/merchant'
 import { construirFyducas } from '../lib/fyduca'
 import { ESTADO_LISTA } from '../data/fyducas'
+import { barcosTorre } from '../data/barcos'
 import { fmtFechaCorta, fmtNum } from '../lib/fechas'
 
 const ICONO_SEGMENTO = {
@@ -179,7 +181,13 @@ export default function Torre() {
     return () => el.removeEventListener('wheel', alRodar)
   }, [])
 
-  const embarques = useMemo(() => construirEmbarques([...ordenes, ...salidasWh]), [ordenes, salidasWh])
+  const navigate = useNavigate()
+  // Los barcos a granel no nacen de una OC del flujo: se suman a la torre como un embarque más.
+  const barcos = useMemo(() => barcosTorre(), [])
+  const embarques = useMemo(
+    () => construirEmbarques([...ordenes, ...salidasWh, ...barcos]),
+    [ordenes, salidasWh, barcos],
+  )
   const costos = useMemo(() => construirCostos(embarques), [embarques])
   const alertas = useMemo(() => construirAlertas(embarques), [embarques])
   const documentos = useMemo(() => construirDocumentos(embarques, recolectas), [embarques, recolectas])
@@ -336,7 +344,7 @@ export default function Torre() {
                       <th className="w-[100px] text-right!">Desviación</th>
                       <th className="w-[120px]">Actualizado</th>
                       <th className="w-[140px]">Riesgo</th>
-                      <th className="w-[120px]" />
+                      <th className="w-[150px]" />
                     </tr>
                   </thead>
                   <tbody>
@@ -388,6 +396,15 @@ export default function Torre() {
                           </td>
                           <td>
                             <div className="flex justify-end gap-1">
+                              {e.transporte === 'Barco' && (
+                                <button
+                                  className="ico text-navy-700"
+                                  title={`Gestionar barco · ${e.buque}`}
+                                  onClick={() => navigate(`/barco/${e.oc.id}`)}
+                                >
+                                  <LuShip size={15} />
+                                </button>
+                              )}
                               <button
                                 className="ico"
                                 title="Cola de correo · trámite asignado a la agencia aduanal"

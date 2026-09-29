@@ -58,7 +58,8 @@ export const MODULOS = [
     sub: 'Monitoreo de embarques',
     icono: LuTowerControl,
     to: '/torre',
-    rutas: ['/torre'],
+    // La gestión de un barco se abre desde la torre: el sidebar la sigue marcando.
+    rutas: ['/torre', '/barco'],
   },
   {
     id: 'kpi',

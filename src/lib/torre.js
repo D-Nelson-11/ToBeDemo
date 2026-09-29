@@ -92,7 +92,7 @@ export function construirEmbarques(ordenes) {
           segmento,
           sitio: oc.centro,
           transporte: d.transporte ?? (terrestre ? 'FTL · Terrestre' : 'FCL · Contenedor'),
-          buque: terrestre ? `Unidad ${1000 + (s % 900)}` : elige(BUQUES, s),
+          buque: d.buque ?? (terrestre ? `Unidad ${1000 + (s % 900)}` : elige(BUQUES, s)),
           // ETA original: la que se prometió con la fecha de salida planificada.
           etaOriginal: addDays(plan, ruta.leg1 + ruta.leg2),
           ubicacion: UBICACION[segmento](ruta, oc),

@@ -22,6 +22,7 @@ const MerchantCarrier = lazy(() => import('./screens/MerchantCarrier'))
 const Kpi = lazy(() => import('./screens/Kpi'))
 const Correo = lazy(() => import('./screens/Correo'))
 const WarehouseVirtual = lazy(() => import('./screens/WarehouseVirtual'))
+const GestionBarco = lazy(() => import('./screens/GestionBarco'))
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -49,6 +50,10 @@ createRoot(document.getElementById('root')).render(
             </Route>
             <Route path="/kpi" element={<Contenedor />}>
               <Route index element={<Kpi />} />
+            </Route>
+            {/* Sin entrada en el sidebar: se llega desde el barquito de la torre */}
+            <Route path="/barco/:id" element={<Contenedor />}>
+              <Route index element={<GestionBarco />} />
             </Route>
             <Route path="/warehouse" element={<Contenedor />}>
               <Route index element={<WarehouseVirtual />} />
