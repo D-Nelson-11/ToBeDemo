@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#003049"/>
+  <!-- superestructura y contenedores en cubierta; el rojo es el acento de marca -->
+  <rect x="20.5" y="11" width="4.5" height="9" rx="1" fill="#ffffff"/>
+  <rect x="14.5" y="15.5" width="5" height="4.5" rx="1" fill="#e30018"/>
+  <rect x="7.5" y="15.5" width="6" height="4.5" rx="1" fill="#ffffff"/>
+  <!-- casco -->
+  <path d="M3.4 21.2h25.2l-3.1 6.1a1.6 1.6 0 0 1-1.4.9H7.9a1.6 1.6 0 0 1-1.4-.9z" fill="#ffffff"/>
+</svg>
