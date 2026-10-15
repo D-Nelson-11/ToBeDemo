@@ -12,6 +12,7 @@ import {
   LuGauge,
   LuLoaderCircle,
   LuLogOut,
+  LuMenu,
   LuMail,
   LuPackageCheck,
   LuPanelLeftClose,
@@ -172,16 +173,16 @@ function MenuUsuario({ vista, onCambiar }) {
         title="Cambiar usuario"
         className={cx(
           'flex items-center gap-2 rounded-sm border px-2 py-1 transition-colors duration-100',
-          abierto ? 'border-line-strong bg-surface-2' : 'border-transparent hover:bg-surface-2',
+          abierto ? 'border-white/25 bg-white/12' : 'border-transparent hover:bg-white/10',
         )}
       >
         <span className="hidden flex-col items-end whitespace-nowrap leading-tight sm:flex">
-          <span className="text-base font-bold text-ink">{vista.usuario}</span>
-          <span className="text-sm text-ink-3">{vista.area}</span>
+          <span className="text-base font-bold text-white">{vista.usuario}</span>
+          <span className="text-sm text-white/70">{vista.area}</span>
         </span>
         <LuChevronDown
           size={15}
-          className={cx('shrink-0 text-ink-3 transition-transform duration-150', abierto && 'rotate-180')}
+          className={cx('shrink-0 text-white/70 transition-transform duration-150', abierto && 'rotate-180')}
         />
       </button>
 
@@ -292,45 +293,55 @@ export default function Shell() {
   )
 
   return (
-    <div className="flex h-full">
-      {/* El color de marca vive acá: el resto del cromo es blanco.
-          El ancho es lo único que se anima; los rótulos se recortan al cerrarse. */}
-      <nav
-        className={cx(
-          'flex shrink-0 flex-col overflow-hidden bg-navy-800 text-white',
-          'transition-[width] duration-200 ease-[var(--ease-out-soft)] motion-reduce:transition-none',
-          plegado ? 'w-14' : 'w-[242px]',
-        )}
-      >
-        {/* Sin borde abajo: con él, la línea del header se veía cruzar al sidebar. */}
-        <div className="relative shrink-0 px-3 pb-3 pt-5">
-          <img
-            src={logoVesta}
-            alt="Vesta"
-            width={280}
-            height={289}
-            className={cx(
-              'mx-auto block h-auto transition-[width] duration-200 ease-[var(--ease-out-soft)] motion-reduce:transition-none',
-              plegado ? 'w-8' : 'w-[76px]',
-            )}
-          />
-          {/* Plegado no cabe al lado del logo: baja centrado debajo. */}
-          <button
-            onClick={() => setPlegado((v) => !v)}
-            title={plegado ? 'Expandir menú' : 'Plegar menú'}
-            aria-label={plegado ? 'Expandir menú' : 'Plegar menú'}
-            className={cx(
-              'flex h-8 w-8 items-center justify-center rounded-sm text-white/60 transition-colors duration-100 hover:bg-white/15 hover:text-white',
-              plegado ? 'mx-auto mt-3' : 'absolute right-2 top-2',
-            )}
-          >
-            {plegado ? <LuPanelLeftOpen size={16} /> : <LuPanelLeftClose size={16} />}
-          </button>
-        </div>
+    <div className="flex h-full flex-col">
+      {/* Barra de marca a todo el ancho: el color vive acá y el sidebar queda blanco. */}
+      <header className="flex h-14 shrink-0 items-center gap-3 bg-navy-800 pl-3 pr-5 text-white">
+        <img src={logoVesta} alt="Vesta" width={280} height={289} className="h-9 w-auto" />
+        <button
+          onClick={() => setPlegado((v) => !v)}
+          title={plegado ? 'Expandir menú' : 'Plegar menú'}
+          aria-label={plegado ? 'Expandir menú' : 'Plegar menú'}
+          className="ml-4 flex h-9 w-9 items-center justify-center rounded-sm text-white/85 transition-colors duration-100 hover:bg-white/12 hover:text-white"
+        >
+          <LuMenu size={22} />
+        </button>
 
-        <div className="flex flex-col gap-1 p-2">
+        <div className="flex-1" />
+
+        <button
+          onClick={() => navigate('/calendario')}
+          title="Calendario logístico"
+          aria-label="Calendario logístico"
+          className={cx(
+            'flex h-8 w-8 items-center justify-center rounded-sm transition-colors duration-100',
+            pathname.startsWith('/calendario') ? 'bg-white/20 text-white' : 'text-white/80 hover:bg-white/12 hover:text-white',
+          )}
+        >
+          <LuCalendarDays size={17} />
+        </button>
+        <MenuUsuario vista={vistaActual} onCambiar={cambiarVista} />
+        <button
+          title="Salir"
+          aria-label="Salir"
+          className="flex h-8 w-8 items-center justify-center rounded-sm text-white/80 transition-colors duration-100 hover:bg-rojo-600 hover:text-white"
+        >
+          <LuLogOut size={16} />
+        </button>
+      </header>
+
+      <div className="flex min-h-0 flex-1">
+        {/* El ancho es lo único que se anima; plegado quedan solo los íconos. */}
+        <nav
+          className={cx(
+            'flex shrink-0 flex-col overflow-y-auto overflow-x-hidden border-r border-line bg-surface',
+            'transition-[width] duration-200 ease-[var(--ease-out-soft)] motion-reduce:transition-none',
+            plegado ? 'w-14' : 'w-[232px]',
+          )}
+        >
+        <div className="flex flex-col gap-0.5 py-2">
+          {!plegado && <span className="lbl px-5 pb-1.5 pt-3">{vistaActual.rotulo}</span>}
           {!modulos.length && !plegado && (
-            <span className="px-2.5 py-2 text-xs leading-snug text-white/55">
+            <span className="px-5 py-2 text-xs leading-snug text-ink-3">
               Esta vista todavía no tiene módulos.
             </span>
           )}
@@ -344,24 +355,23 @@ export default function Shell() {
                   to={to}
                   title={plegado ? titulo + ' · ' + sub : undefined}
                   className={cx(
-                    'relative flex items-center gap-2.5 rounded-sm px-2.5 py-2.5 no-underline transition-colors duration-100',
-                    activo ? 'bg-white/18 text-white' : 'text-white/80 hover:bg-white/10 hover:text-white',
-                    activo &&
-                      'before:absolute before:-left-2 before:inset-y-1.5 before:w-[3px] before:rounded-r-sm before:bg-white',
+                    'relative flex items-center gap-3 py-2.5 no-underline transition-colors duration-100',
+                    plegado ? 'justify-center px-0' : 'px-5',
+                    activo ? 'bg-navy-50 text-navy-700' : 'text-ink-2 hover:bg-surface-2 hover:text-navy-700',
+                    activo && 'before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-navy-600',
                   )}
                 >
-                  <Icono size={17} strokeWidth={1.9} className="shrink-0" />
+                  <Icono size={17} strokeWidth={1.9} className={cx('shrink-0', activo ? 'text-navy-600' : 'text-ink-3')} />
                   <span
                     className={cx(
                       'min-w-0 flex-1 overflow-hidden whitespace-nowrap',
                       'transition-opacity duration-150 ease-[var(--ease-out-soft)]',
-                      plegado && 'pointer-events-none opacity-0',
+                      plegado && 'hidden',
                     )}
                   >
-                    <span className={cx('block text-base', activo ? 'font-bold' : 'font-medium')}>
+                    <span className={cx('block text-base', activo ? 'font-bold' : 'font-medium')} title={sub}>
                       {titulo}
                     </span>
-                    <span className="block text-xs text-white/65">{sub}</span>
                   </span>
 
                   {/* La flecha avisa que hay submenú; el clic pliega sin navegar */}
@@ -373,7 +383,7 @@ export default function Shell() {
                       }}
                       aria-label={abierto ? 'Plegar ' + titulo : 'Desplegar ' + titulo}
                       aria-expanded={abierto}
-                      className="-mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-white/70 transition-colors duration-100 hover:bg-white/15 hover:text-white"
+                      className="-mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-ink-3 transition-colors duration-100 hover:bg-surface-3 hover:text-ink"
                     >
                       <LuChevronDown
                         size={15}
@@ -395,7 +405,7 @@ export default function Shell() {
                     )}
                   >
                     <div className="overflow-hidden">
-                      <div className="mb-1 ml-[19px] flex flex-col border-l border-white/20 pl-2">
+                      <div className="mb-1 ml-[28px] mr-3 flex flex-col border-l border-line pl-2">
                         {hijos.map((h) => (
                           <NavLink
                             key={h.to}
@@ -405,8 +415,8 @@ export default function Shell() {
                               cx(
                                 'rounded-sm px-2.5 py-1.5 text-sm no-underline transition-colors duration-100',
                                 isActive
-                                  ? 'bg-white/15 font-bold text-white'
-                                  : 'text-white/70 hover:bg-white/10 hover:text-white',
+                                  ? 'bg-navy-50 font-bold text-navy-700'
+                                  : 'text-ink-2 hover:bg-surface-2 hover:text-navy-700',
                               )
                             }
                           >
@@ -422,14 +432,12 @@ export default function Shell() {
           })}
         </div>
 
-        <div className="flex-1" />
-      </nav>
+        </nav>
 
-      <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-        {/* Header blanco */}
-        <header className="flex h-14 shrink-0 items-center gap-4 border-b border-line bg-surface px-6">
-          <div className="min-w-0">
-            <h1 className="truncate text-xl font-bold text-navy-800">
+        <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
+          {/* Título de la pantalla, sobre el contenido */}
+          <div className="shrink-0 border-b border-line bg-surface px-6 py-3">
+            <h1 className="truncate text-lg font-bold uppercase tracking-wide text-navy-800">
               {modulo ? modulo.titulo : vistaActual.rotulo}
             </h1>
             <span className="block text-sm text-ink-3">
@@ -441,31 +449,6 @@ export default function Shell() {
                   : 'Sin módulos habilitados'}
             </span>
           </div>
-
-          <div className="flex-1" />
-
-          <button
-            onClick={() => navigate('/calendario')}
-            title="Calendario logístico"
-            aria-label="Calendario logístico"
-            className={cx(
-              'flex h-8 w-8 items-center justify-center rounded-sm border transition-colors duration-100',
-              pathname.startsWith('/calendario')
-                ? 'border-navy-200 bg-navy-50 text-navy-700'
-                : 'border-line text-ink-3 hover:bg-surface-2 hover:text-navy-700',
-            )}
-          >
-            <LuCalendarDays size={15} />
-          </button>
-          <MenuUsuario vista={vistaActual} onCambiar={cambiarVista} />
-          <button
-            title="Salir"
-            aria-label="Salir"
-            className="flex h-8 w-8 items-center justify-center rounded-sm border border-line text-ink-3 transition-colors duration-100 hover:border-rojo-100 hover:bg-rojo-50 hover:text-rojo-700"
-          >
-            <LuLogOut size={15} />
-          </button>
-        </header>
 
         {/* El stepper solo tiene sentido dentro del flujo */}
         {modulo?.id === 'flujo' && (
@@ -535,6 +518,7 @@ export default function Shell() {
             {modulo ? <Outlet /> : <SinModulos vista={vistaActual} />}
           </Suspense>
         </main>
+      </div>
       </div>
 
       {/* Avisos de "esto se creó": arriba al centro, grandes y con botón de cerrar */}

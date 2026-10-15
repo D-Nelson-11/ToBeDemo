@@ -187,10 +187,87 @@ export default function WarehouseVirtual() {
         <Kpi rotulo="Seleccionado" valor={seleccionados.length} nota="Para crear salida" />
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
-        <PanelPlegable
-          titulo="Envíos al centro de consolidación"
-          extra={<span className="num text-xs text-ink-3">{filas.length}</span>}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+        <PanelPlegable titulo="Tránsito hacia el Warehouse">
+          <div className="flex flex-col gap-4 p-4">
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+              <Dato rotulo="En tránsito a Warehouse">{cuenta((x) => estadoWh(x) === 'En tránsito')} envíos activos</Dato>
+              <Dato rotulo="En tiempo">{cuenta((x) => estadoWh(x) === 'En tránsito' && !x.retraso)} monitoreados</Dato>
+              <Dato rotulo="Retrasados">{cuenta((x) => !x.recepcion && x.retraso)} requieren seguimiento</Dato>
+              <Dato rotulo="Arribados">{cuenta((x) => x.llegada)} en Warehouse</Dato>
+            </div>
+
+            <div className="rounded-sm border border-line px-4 py-3">
+              <div className="mb-3 flex flex-wrap items-baseline gap-2">
+                <b className="text-sm font-bold text-navy-800">Línea de tiempo · Tránsito hacia Warehouse</b>
+                <span className="text-xs text-ink-3">Salida → tránsito → llegada</span>
+              </div>
+              <Linea actual={2} />
+            </div>
+          </div>
+        </PanelPlegable>
+
+        {/* ------------------------- motor de consolidación ------------------------ */}
+        <div className="panel">
+          <div className="panel-head">
+            <span className="panel-title">
+              <LuSparkles size={14} /> Motor de consolidación
+            </span>
+          </div>
+          <div className="flex flex-col gap-3 p-4">
+            <p className="m-0 rounded-sm border border-line bg-surface-2 px-3 py-2.5 text-sm text-ink-2">
+              <b className="text-ink">Propuesta automática:</b> el sistema busca mercancías disponibles que compartan
+              condiciones compatibles.
+            </p>
+            <div>
+              <div className="lbl mb-1.5">Reglas activas</div>
+              <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm text-ink-2">
+                {REGLAS.map((r) => (
+                  <li key={r} className="flex items-center gap-2">
+                    <LuCircleCheck size={13} className="shrink-0 text-teal-600" /> {r}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <Button variant="primary" block onClick={analizar}>
+              <LuSparkles size={14} /> Analizar oportunidades
+            </Button>
+
+            {propuesta && propuesta.length === 0 && (
+              <p className="m-0 text-sm text-ink-3">No hay suficiente mercancía disponible para una propuesta.</p>
+            )}
+            {propuesta && propuesta.length > 0 && (
+              <div className="flex flex-col gap-2 rounded-sm border border-teal-100 bg-teal-50 p-3 text-sm">
+                <b className="text-teal-700">Propuesta automática encontrada</b>
+                <ul className="m-0 flex list-none flex-col gap-0.5 p-0 text-ink-2">
+                  {propuesta.map((x) => (
+                    <li key={x.ref}>
+                      <b className="num text-ink">{x.oc}</b> · {x.sku.split(' · ')[0]}
+                    </li>
+                  ))}
+                </ul>
+                <span className="text-xs text-ink-3">Criterio: disponibilidad + ventana logística compatible</span>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => {
+                    setMarcados(new Set(propuesta.map((x) => x.ref)))
+                    setPropuesta(null)
+                    avisar('Propuesta aceptada. Mercancía seleccionada.', 'ok')
+                  }}
+                >
+                  Aceptar propuesta
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* La tabla va aparte para usar todo el ancho: el motor solo acompaña al resumen. */}
+      <PanelPlegable
+        titulo="Envíos al centro de consolidación"
+        extra={<span className="num text-xs text-ink-3">{filas.length}</span>}
           acciones={
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative flex items-center">
@@ -219,23 +296,8 @@ export default function WarehouseVirtual() {
               </Button>
             </div>
           }
-        >
-          <div className="flex flex-col gap-4 p-4">
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-              <Dato rotulo="En tránsito a Warehouse">{cuenta((x) => estadoWh(x) === 'En tránsito')} envíos activos</Dato>
-              <Dato rotulo="En tiempo">{cuenta((x) => estadoWh(x) === 'En tránsito' && !x.retraso)} monitoreados</Dato>
-              <Dato rotulo="Retrasados">{cuenta((x) => !x.recepcion && x.retraso)} requieren seguimiento</Dato>
-              <Dato rotulo="Arribados">{cuenta((x) => x.llegada)} en Warehouse</Dato>
-            </div>
-
-            <div className="rounded-sm border border-line px-4 py-3">
-              <div className="mb-3 flex flex-wrap items-baseline gap-2">
-                <b className="text-sm font-bold text-navy-800">Línea de tiempo · Tránsito hacia Warehouse</b>
-                <span className="text-xs text-ink-3">Salida → tránsito → llegada</span>
-              </div>
-              <Linea actual={2} />
-            </div>
-
+      >
+        <div className="px-4 pt-3 pb-3">
             <div className="flex flex-wrap items-center gap-2 rounded-sm border border-navy-100 bg-navy-50 px-3 py-2 text-sm">
               <span>
                 <b className="num font-bold text-navy-800">{seleccionados.length}</b> mercancía
@@ -243,7 +305,7 @@ export default function WarehouseVirtual() {
               </span>
               <span className="ml-auto text-xs text-ink-3">Solo lo “Recibido” se puede seleccionar</span>
             </div>
-          </div>
+        </div>
 
           <div className="tabla-scroll">
             <table className="tbl">
@@ -337,64 +399,7 @@ export default function WarehouseVirtual() {
               </tbody>
             </table>
           </div>
-        </PanelPlegable>
-
-        {/* ------------------------- motor de consolidación ------------------------ */}
-        <div className="panel">
-          <div className="panel-head">
-            <span className="panel-title">
-              <LuSparkles size={14} /> Motor de consolidación
-            </span>
-          </div>
-          <div className="flex flex-col gap-3 p-4">
-            <p className="m-0 rounded-sm border border-line bg-surface-2 px-3 py-2.5 text-sm text-ink-2">
-              <b className="text-ink">Propuesta automática:</b> el sistema busca mercancías disponibles que compartan
-              condiciones compatibles.
-            </p>
-            <div>
-              <div className="lbl mb-1.5">Reglas activas</div>
-              <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm text-ink-2">
-                {REGLAS.map((r) => (
-                  <li key={r} className="flex items-center gap-2">
-                    <LuCircleCheck size={13} className="shrink-0 text-teal-600" /> {r}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <Button variant="primary" block onClick={analizar}>
-              <LuSparkles size={14} /> Analizar oportunidades
-            </Button>
-
-            {propuesta && propuesta.length === 0 && (
-              <p className="m-0 text-sm text-ink-3">No hay suficiente mercancía disponible para una propuesta.</p>
-            )}
-            {propuesta && propuesta.length > 0 && (
-              <div className="flex flex-col gap-2 rounded-sm border border-teal-100 bg-teal-50 p-3 text-sm">
-                <b className="text-teal-700">Propuesta automática encontrada</b>
-                <ul className="m-0 flex list-none flex-col gap-0.5 p-0 text-ink-2">
-                  {propuesta.map((x) => (
-                    <li key={x.ref}>
-                      <b className="num text-ink">{x.oc}</b> · {x.sku.split(' · ')[0]}
-                    </li>
-                  ))}
-                </ul>
-                <span className="text-xs text-ink-3">Criterio: disponibilidad + ventana logística compatible</span>
-                <Button
-                  size="sm"
-                  variant="primary"
-                  onClick={() => {
-                    setMarcados(new Set(propuesta.map((x) => x.ref)))
-                    setPropuesta(null)
-                    avisar('Propuesta aceptada. Mercancía seleccionada.', 'ok')
-                  }}
-                >
-                  Aceptar propuesta
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      </PanelPlegable>
 
       {/* ------------------- preparar salida: el paso 4 con las REF. WH ------------------- */}
       <Modal
