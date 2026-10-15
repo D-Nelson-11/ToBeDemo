@@ -296,15 +296,15 @@ export default function Shell() {
     <div className="flex h-full flex-col">
       {/* Barra de marca a todo el ancho: el color vive acá y el sidebar queda blanco. */}
       <header className="flex h-14 shrink-0 items-center gap-3 bg-navy-800 pl-3 pr-5 text-white">
-        <img src={logoVesta} alt="Vesta" width={280} height={289} className="h-9 w-auto" />
         <button
           onClick={() => setPlegado((v) => !v)}
           title={plegado ? 'Expandir menú' : 'Plegar menú'}
           aria-label={plegado ? 'Expandir menú' : 'Plegar menú'}
-          className="ml-4 flex h-9 w-9 items-center justify-center rounded-sm text-white/85 transition-colors duration-100 hover:bg-white/12 hover:text-white"
+          className="flex h-9 w-9 items-center justify-center rounded-sm text-white/85 transition-colors duration-100 hover:bg-white/12 hover:text-white"
         >
           <LuMenu size={22} />
         </button>
+        <img src={logoVesta} alt="Vesta" width={280} height={289} className="h-9 w-auto" />
 
         <div className="flex-1" />
 
