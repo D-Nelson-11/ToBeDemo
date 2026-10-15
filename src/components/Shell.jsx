@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   LuBanknote,
   LuBriefcase,
+  LuCalendarDays,
   LuChartColumn,
   LuCheck,
   LuChevronDown,
@@ -59,7 +60,7 @@ export const MODULOS = [
     icono: LuTowerControl,
     to: '/torre',
     // La gestión de un barco se abre desde la torre: el sidebar la sigue marcando.
-    rutas: ['/torre', '/barco'],
+    rutas: ['/torre', '/barco', '/calendario'],
   },
   {
     id: 'kpi',
@@ -433,12 +434,29 @@ export default function Shell() {
             </h1>
             <span className="block text-sm text-ink-3">
               {/* Dentro de un submenú el subtítulo dice la pantalla, no el módulo */}
-              {modulo ? (hijoActivo?.rotulo ?? modulo.sub) : 'Sin módulos habilitados'}
+              {pathname.startsWith('/calendario')
+                ? 'Calendario logístico'
+                : modulo
+                  ? (hijoActivo?.rotulo ?? modulo.sub)
+                  : 'Sin módulos habilitados'}
             </span>
           </div>
 
           <div className="flex-1" />
 
+          <button
+            onClick={() => navigate('/calendario')}
+            title="Calendario logístico"
+            aria-label="Calendario logístico"
+            className={cx(
+              'flex h-8 w-8 items-center justify-center rounded-sm border transition-colors duration-100',
+              pathname.startsWith('/calendario')
+                ? 'border-navy-200 bg-navy-50 text-navy-700'
+                : 'border-line text-ink-3 hover:bg-surface-2 hover:text-navy-700',
+            )}
+          >
+            <LuCalendarDays size={15} />
+          </button>
           <MenuUsuario vista={vistaActual} onCambiar={cambiarVista} />
           <button
             title="Salir"

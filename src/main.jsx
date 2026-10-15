@@ -22,6 +22,7 @@ const MerchantCarrier = lazy(() => import('./screens/MerchantCarrier'))
 const Kpi = lazy(() => import('./screens/Kpi'))
 const Correo = lazy(() => import('./screens/Correo'))
 const WarehouseVirtual = lazy(() => import('./screens/WarehouseVirtual'))
+const CalendarioLogistico = lazy(() => import('./screens/CalendarioLogistico'))
 const GestionBarco = lazy(() => import('./screens/GestionBarco'))
 
 createRoot(document.getElementById('root')).render(
@@ -54,6 +55,10 @@ createRoot(document.getElementById('root')).render(
             {/* Sin entrada en el sidebar: se llega desde el barquito de la torre */}
             <Route path="/barco/:id" element={<Contenedor />}>
               <Route index element={<GestionBarco />} />
+            </Route>
+            {/* Sin entrada en el sidebar: se llega desde el calendario del header */}
+            <Route path="/calendario" element={<Contenedor />}>
+              <Route index element={<CalendarioLogistico />} />
             </Route>
             <Route path="/warehouse" element={<Contenedor />}>
               <Route index element={<WarehouseVirtual />} />

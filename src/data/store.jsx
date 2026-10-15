@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useReducer, useRef, useState } from 'react'
 import { analizarCorreo, respuestaProveedor } from './correos'
 import { ORDENES_INICIALES } from './ordenes'
+import { cotizacionesIniciales } from './cotizaciones'
 import { envioDesdeFila, salidaDesdeItems, warehouseInicial } from '../lib/warehouse'
 
 const OcContext = createContext(null)
@@ -127,6 +128,9 @@ export function OcProvider({ children }) {
   const [warehouse, setWarehouse] = useState(warehouseInicial)
   // Salidas consolidadas del Warehouse: la torre las lista junto con las OC.
   const [salidasWh, setSalidasWh] = useState([])
+  // Solicitudes de cotización de transporte de Supply Scheduling.
+  const [cotizaciones, setCotizaciones] = useState(cotizacionesIniciales)
+  const nextCot = useRef(1090)
   const envios = useRef({})
   const nextId = useRef(1)
 
@@ -222,6 +226,17 @@ export function OcProvider({ children }) {
     setAvancesFyduca((a) => ({ ...a, [id]: [...(a[id] ?? []), new Date()] }))
   }, [])
 
+  // El id se saca fuera del updater: React puede correrlo dos veces (StrictMode).
+  const crearCotizacion = useCallback((datos) => {
+    const id = 'Q-' + nextCot.current++
+    setCotizaciones((c) => [{ ...datos, id }, ...c])
+    return id
+  }, [])
+
+  const actualizarCotizacion = useCallback((id, patch) => {
+    setCotizaciones((c) => c.map((x) => (x.id === id ? { ...x, ...patch } : x)))
+  }, [])
+
   const value = useMemo(
     () => ({
       ordenes,
@@ -240,6 +255,9 @@ export function OcProvider({ children }) {
       actualizarWarehouse,
       salidasWh,
       crearSalidaWh,
+      cotizaciones,
+      crearCotizacion,
+      actualizarCotizacion,
       vista,
       setVista,
       cargando,
@@ -281,6 +299,9 @@ export function OcProvider({ children }) {
       actualizarWarehouse,
       salidasWh,
       crearSalidaWh,
+      cotizaciones,
+      crearCotizacion,
+      actualizarCotizacion,
     ],
   )
 

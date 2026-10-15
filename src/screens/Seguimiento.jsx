@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import {
   LuCalendarClock,
   LuClipboardCheck,
+  LuClipboardList,
   LuFileDown,
   LuInfo,
   LuShip,
   LuSparkles,
   LuTriangleAlert,
+  LuTruck,
   LuWarehouse,
 } from 'react-icons/lu'
 import Button, { cx } from '../components/ui/Button'
@@ -15,7 +17,10 @@ import PanelPlegable from '../components/ui/PanelPlegable'
 import { Input, Select } from '../components/ui/Field'
 import ModalActualizarFechas from './ModalActualizarFechas'
 import ModalConsolidacion from './ModalConsolidacion'
+import ModalCotizaciones from './ModalCotizaciones'
+import ModalCotizarTransporte from './ModalCotizarTransporte'
 import { useOc } from '../data/store'
+import { esCollect } from '../data/cotizaciones'
 import { CHECK_ADUANA, CHECK_LOGISTICA, INCOTERMS, RUTAS, requisitosAduana } from '../data/catalogos'
 import { addDays, desdeHoy, diasEntre, fmtFechaCorta, fmtNum, hoy, parseISO } from '../lib/fechas'
 
@@ -26,6 +31,12 @@ const LISTAS = [
 
 // El umbral que separa "por vencer" de "en tiempo": días antes de la salida.
 const DIAS_AVISO = 7
+
+const CHIP_COT = {
+  'En proceso de cotización': 'bg-ambar-50 text-ambar-700',
+  Cotizado: 'bg-teal-50 text-teal-700',
+  'Transporte asignado': 'bg-navy-50 text-navy-700',
+}
 
 const TONOS = {
   rojo: {
@@ -191,7 +202,7 @@ function Avance({ marcas = [], tono }) {
 }
 
 export default function Seguimiento() {
-  const { ordenes, marcarCheck, avisar, warehouse, enviarAWarehouse } = useOc()
+  const { ordenes, marcarCheck, avisar, warehouse, enviarAWarehouse, cotizaciones } = useOc()
   const navigate = useNavigate()
   const [qOc, setQOc] = useState('')
   const [fIncoterm, setFIncoterm] = useState('')
@@ -200,6 +211,8 @@ export default function Seguimiento() {
   const [marcados, setMarcados] = useState(() => new Set())
   const [reprogramando, setReprogramando] = useState(false)
   const [consolidando, setConsolidando] = useState(false)
+  const [cotizando, setCotizando] = useState(null)
+  const [viendoCotizaciones, setViendoCotizaciones] = useState(false)
 
   const todas = useMemo(() => construirFilas(ordenes), [ordenes])
 
@@ -234,6 +247,24 @@ export default function Seguimiento() {
 
   // Despachos que ya están en el Warehouse Virtual: llevan el chip WH en la tabla.
   const enWarehouse = useMemo(() => new Set(warehouse.map((x) => x.clave).filter(Boolean)), [warehouse])
+
+  // La más reciente de cada despacho es la que manda en la tabla: las anteriores quedan en el historial.
+  const cotizacionDe = useMemo(() => {
+    const m = {}
+    cotizaciones.forEach((c) => {
+      if (!m[c.clave] || c.fecha > m[c.clave].fecha) m[c.clave] = c
+    })
+    return m
+  }, [cotizaciones])
+
+  // Solo se cotiza de a un despacho y solo si es Collect: el resto lo mueve el proveedor.
+  const paraCotizar = filasMarcadas.length === 1 && esCollect(filasMarcadas[0].oc.incoterm) ? filasMarcadas[0] : null
+  const motivoSinCotizar =
+    filasMarcadas.length > 1
+      ? 'Para cotizar transporte marca un solo despacho'
+      : filasMarcadas.length === 1 && !paraCotizar
+        ? `${filasMarcadas[0].oc.incoterm} no es Collect: el transporte lo coordina el proveedor`
+        : null
 
   const conteo = useMemo(() => {
     const c = { rojo: 0, ambar: 0, teal: 0, gris: 0 }
@@ -292,6 +323,13 @@ export default function Seguimiento() {
               onChange={(e) => setFAlerta(e.target.value)}
               className="w-[170px]"
             />
+            <Button onClick={() => setViendoCotizaciones(true)}>
+              <LuClipboardList size={14} />
+              Cotizaciones
+              <span className="num rounded-full bg-navy-50 px-1.5 text-xs font-bold text-navy-700">
+                {cotizaciones.length}
+              </span>
+            </Button>
             <Button onClick={() => avisar('Reporte de seguimiento descargado.', 'ok')}>
               <LuFileDown size={14} />
               Exportar
@@ -313,7 +351,15 @@ export default function Seguimiento() {
               <Button variant="link" onClick={() => alternarTodos(false)}>
                 Quitar selección
               </Button>
-              <div className="ml-auto flex flex-wrap gap-2">
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                {motivoSinCotizar && <span className="text-sm text-ink-3">{motivoSinCotizar}</span>}
+                <Button
+                  disabled={!paraCotizar}
+                  onClick={() => setCotizando(paraCotizar)}
+                >
+                  <LuTruck size={14} />
+                  Cotizar transporte
+                </Button>
                 <Button onClick={() => setConsolidando(true)}>
                   <LuWarehouse size={14} />
                   Enviar a punto de consolidación
@@ -350,6 +396,7 @@ export default function Seguimiento() {
                     <th className="w-[92px]">Despacho</th>
                     <th className="min-w-[190px]">Cat / SKU</th>
                     <th className="w-[86px]">Incoterm</th>
+                    <th className="w-[170px]">Cotización</th>
                     <th className="w-[104px]">ETD salida</th>
                     <th className="w-[110px]">ETA frontera</th>
                     <th className="w-[104px]">ETA planta</th>
@@ -362,7 +409,7 @@ export default function Seguimiento() {
                 <tbody>
                   {filas.length === 0 && (
                     <tr>
-                      <td colSpan={12} className="h-[148px]! bg-surface text-center">
+                      <td colSpan={13} className="h-[148px]! bg-surface text-center">
                         <span className="inline-flex flex-col items-center gap-[7px]">
                           <LuShip size={26} strokeWidth={1.5} className="text-navy-200" />
                           <span className="text-base font-semibold text-ink-2">
@@ -411,7 +458,24 @@ export default function Seguimiento() {
                         <td className="cell-cut" title={f.material?.nombre}>
                           <span className="text-ink-3">{f.material?.codigo}</span> · {f.material?.nombre}
                         </td>
-                        <td>{f.oc.incoterm}</td>
+                        <td>
+                          {esCollect(f.oc.incoterm) ? (
+                            <span title="Collect: el transporte lo coordina el comprador" className="rounded-xs bg-teal-50 px-1.5 py-px font-bold text-teal-700">
+                              {f.oc.incoterm}
+                            </span>
+                          ) : (
+                            f.oc.incoterm
+                          )}
+                        </td>
+                        <td>
+                          {cotizacionDe[f.clave] ? (
+                            <span className={cx('inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-xs font-semibold', CHIP_COT[cotizacionDe[f.clave].estado])}>
+                              {cotizacionDe[f.clave].estado}
+                            </span>
+                          ) : (
+                            <span className="text-ink-4">—</span>
+                          )}
+                        </td>
                         <td className={cx('num', vencido && 'font-bold text-rojo-700')}>
                           {f.etd ? fmtFechaCorta(f.etd) : '—'}
                         </td>
@@ -525,6 +589,18 @@ export default function Seguimiento() {
           }}
         />
       )}
+
+      {cotizando && (
+        <ModalCotizarTransporte
+          fila={cotizando}
+          onClose={() => {
+            setCotizando(null)
+            setMarcados(new Set())
+          }}
+        />
+      )}
+
+      {viendoCotizaciones && <ModalCotizaciones filas={todas} onClose={() => setViendoCotizaciones(false)} />}
 
       <ModalActualizarFechas
         abierto={reprogramando}
