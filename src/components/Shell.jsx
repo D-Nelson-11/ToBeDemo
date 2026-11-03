@@ -294,7 +294,7 @@ export default function Shell() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Barra de marca a todo el ancho: el color vive acá y el sidebar queda blanco. */}
+      {/* Barra de marca a todo el ancho: el sidebar queda blanco. */}
       <header className="flex h-14 shrink-0 items-center gap-3 bg-navy-800 pl-3 pr-5 text-white">
         <button
           onClick={() => setPlegado((v) => !v)}
@@ -357,11 +357,10 @@ export default function Shell() {
                   className={cx(
                     'relative flex items-center gap-3 py-2.5 no-underline transition-colors duration-100',
                     plegado ? 'justify-center px-0' : 'px-5',
-                    activo ? 'bg-navy-50 text-navy-700' : 'text-ink-2 hover:bg-surface-2 hover:text-navy-700',
-                    activo && 'before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-navy-600',
+                    activo ? 'bg-navy-700 text-white' : 'text-ink-2 hover:bg-surface-2 hover:text-navy-700',
                   )}
                 >
-                  <Icono size={17} strokeWidth={1.9} className={cx('shrink-0', activo ? 'text-navy-600' : 'text-ink-3')} />
+                  <Icono size={17} strokeWidth={1.9} className={cx('shrink-0', activo ? 'text-white' : 'text-ink-3')} />
                   <span
                     className={cx(
                       'min-w-0 flex-1 overflow-hidden whitespace-nowrap',
@@ -383,7 +382,7 @@ export default function Shell() {
                       }}
                       aria-label={abierto ? 'Plegar ' + titulo : 'Desplegar ' + titulo}
                       aria-expanded={abierto}
-                      className="-mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-ink-3 transition-colors duration-100 hover:bg-surface-3 hover:text-ink"
+                      className="-mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-current opacity-70 transition duration-100 hover:bg-black/10 hover:opacity-100"
                     >
                       <LuChevronDown
                         size={15}
@@ -415,7 +414,7 @@ export default function Shell() {
                               cx(
                                 'rounded-sm px-2.5 py-1.5 text-sm no-underline transition-colors duration-100',
                                 isActive
-                                  ? 'bg-navy-50 font-bold text-navy-700'
+                                  ? 'bg-navy-700 font-bold text-white'
                                   : 'text-ink-2 hover:bg-surface-2 hover:text-navy-700',
                               )
                             }
