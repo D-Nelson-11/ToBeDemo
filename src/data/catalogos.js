@@ -56,6 +56,10 @@ export const ORGANIZACIONES = ['CORPORACION DINANT S.A', 'JETSTEREO SA DE CV']
 
 export const CENTROS = ['CD DINANT SNACK', 'CD JETSTEREO AMARATECA', 'PLANTA AMARATECA']
 
+export const CLIENTES = ['Corporación Dinant S.A', 'Jetstereo S.A de C.V']
+
+export const AREAS_COMPRA = ['Materia Prima', 'Empaque', 'Repuestos', 'Servicios']
+
 // ---------------------------------------------------------------------------
 // Maestro de rutas: cada ruta es Salida Proveedor → ETA Frontera → Planta.
 // leg1 = días proveedor→frontera/puerto, leg2 = días frontera→planta.

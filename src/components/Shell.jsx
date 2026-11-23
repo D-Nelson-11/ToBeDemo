@@ -452,7 +452,7 @@ export default function Shell() {
         {/* El stepper solo tiene sentido dentro del flujo */}
         {modulo?.id === 'flujo' && (
           <nav className="shrink-0 border-b border-line bg-surface">
-            <div className="contenedor flex items-center overflow-x-auto py-2">
+            <div className="contenedor flex items-center overflow-x-auto py-1">
               {PASOS.map(({ paso, to, titulo }, i) => {
                 const hecho = i < idxPaso
                 return (
@@ -470,7 +470,7 @@ export default function Shell() {
                       to={to}
                       className={({ isActive }) =>
                         cx(
-                          'flex shrink-0 items-center gap-2.5 rounded-md px-2.5 py-1.5 no-underline transition-colors duration-100',
+                          'flex shrink-0 items-center gap-2 rounded-md px-2 py-1 no-underline transition-colors duration-100',
                           isActive ? 'bg-navy-50' : 'hover:bg-surface-2',
                         )
                       }
@@ -480,19 +480,19 @@ export default function Shell() {
                           {/* El número vive en el círculo: no hace falta repetirlo de rótulo */}
                           <span
                             className={cx(
-                              'flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full text-sm font-bold transition-colors duration-100',
+                              'flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors duration-100',
                               isActive
-                                ? 'bg-navy-800 text-white ring-4 ring-navy-100'
+                                ? 'bg-navy-800 text-white ring-2 ring-navy-100'
                                 : hecho
                                   ? 'bg-teal-600 text-white'
                                   : 'border border-line-strong bg-surface text-ink-3',
                             )}
                           >
-                            {hecho ? <LuCheck size={13} strokeWidth={3} /> : paso}
+                            {hecho ? <LuCheck size={12} strokeWidth={3} /> : paso}
                           </span>
                           <span
                             className={cx(
-                              'whitespace-nowrap text-base',
+                              'whitespace-nowrap text-sm',
                               isActive
                                 ? 'font-bold text-navy-800'
                                 : hecho

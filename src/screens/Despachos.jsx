@@ -470,7 +470,7 @@ export default function Despachos() {
                           <LuStickyNote size={14} />
                         </button>
 
-                        <button
+                        {/* <button
                           className={cx('ico', oc.selloPendiente && 'ico-on')}
                           title={oc.selloPendiente ? 'Sello pendiente' : 'Sellada'}
                           onClick={() =>
@@ -483,10 +483,10 @@ export default function Despachos() {
                           }
                         >
                           <LuStamp size={14} />
-                        </button>
+                        </button> */}
 
                         {/* Inactivar / reactivar */}
-                        <button
+                        {/* <button
                           className="ico ico-ambar"
                           title={oc.activa ? 'Inactivar OC' : 'Reactivar OC'}
                           onClick={() => {
@@ -498,7 +498,7 @@ export default function Despachos() {
                           }}
                         >
                           {oc.activa ? <LuBan size={14} /> : <LuRotateCcw size={14} />}
-                        </button>
+                        </button> */}
 
                         <button
                           className="ico ico-rojo"

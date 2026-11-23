@@ -1,29 +1,31 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LuFileText, LuPackage, LuPlus, LuRotateCcw, LuSparkles, LuTags, LuTrash2 } from 'react-icons/lu'
+import { LuFileText, LuPackage, LuPlus, LuRotateCcw, LuSparkles, LuTrash2 } from 'react-icons/lu'
 import Panel from '../components/ui/Panel'
 import Button, { cx } from '../components/ui/Button'
-import { Field, Input, Select, Textarea } from '../components/ui/Field'
+import { Field, Input, Select } from '../components/ui/Field'
 import { siguienteIdOc, useOc } from '../data/store'
 import {
-  CATEGORIAS_PORTAL,
+  AREAS_COMPRA,
   CATEGORIAS_SKU,
+  CENTROS,
+  CLIENTES,
   COND_PAGO,
   INCOTERMS,
   MONEDAS,
+  ORGANIZACIONES,
   PROVEEDORES,
+  RESPONSABLES,
   TIPOS_EMBALAJE,
   UNIDADES,
 } from '../data/catalogos'
 import { fmtMoneda, fmtNum, toISO } from '../lib/fechas'
 
-const CONTEXTO = [
-  ['Cliente', 'Corporación Dinant S.A'],
-  ['Organización', 'DINANT'],
-  ['Centro', 'CD DINANT SNACK'],
-  ['Área de compra', 'Materia Prima'],
-  ['Resp. compra', 'User'],
-]
+// Opciones de responsable: el usuario en sesión primero.
+const RESPONSABLES_OC = ['User', ...RESPONSABLES]
+
+// Controles compactos: la cabecera ocupa poco y la tabla de materiales sube.
+const COMPACTO = 'h-7 text-sm'
 
 // Lo que "extrae" el lector de PDF al procesar la orden del proveedor.
 const MATERIALES_DEL_PDF = [
@@ -58,6 +60,11 @@ export default function OrdenCompra() {
   const navegar = useNavigate()
 
   const [form, setForm] = useState({
+    cliente: 'Corporación Dinant S.A',
+    organizacion: 'CORPORACION DINANT S.A',
+    centro: 'CD DINANT SNACK',
+    areaCompra: 'Materia Prima',
+    resp: 'User',
     documento: '',
     proveedor: '',
     incoterm: '',
@@ -66,7 +73,6 @@ export default function OrdenCompra() {
     condPago: '',
     instrucciones: '',
     nota: '',
-    categoriaPortal: '',
     categoriaSku: '',
     embalaje: '',
   })
@@ -97,7 +103,6 @@ export default function OrdenCompra() {
       incoterm: f.incoterm || 'FOB',
       condPago: f.condPago || 'Crédito 30 días',
       fechaDoc: f.fechaDoc || toISO(new Date()),
-      categoriaPortal: f.categoriaPortal || 'Materia Prima',
       categoriaSku: f.categoriaSku || 'Papa y tubérculos',
       embalaje: f.embalaje || 'Bin plástico',
     }))
@@ -117,9 +122,11 @@ export default function OrdenCompra() {
     crearOc({
       id: form.documento,
       proveedor: form.proveedor,
-      resp: 'User',
-      organizacion: 'CORPORACION DINANT S.A',
-      centro: 'CD DINANT SNACK',
+      resp: form.resp,
+      cliente: form.cliente,
+      areaCompra: form.areaCompra,
+      organizacion: form.organizacion,
+      centro: form.centro,
       fechaDoc: form.fechaDoc || toISO(new Date()),
       fechaCorreo: form.fechaCorreo,
       ultEmbarque: null,
@@ -147,101 +154,58 @@ export default function OrdenCompra() {
     cargar('Cargando…', () => navegar('/despachos'))
   }
 
+  const campo = (label, nombre, options, extra = {}) => (
+    <Field label={label} className={cx('gap-1', extra.className)} required={extra.required}>
+      <Select
+        className={COMPACTO}
+        placeholder={extra.placeholder ?? 'Seleccione…'}
+        options={options}
+        value={form[nombre]}
+        onChange={set(nombre)}
+      />
+    </Field>
+  )
+
   return (
     <div className="flex min-h-full flex-col">
-      {/* Contexto de la orden: una tira de datos, no una tarjeta. Es referencia, no protagonista. */}
-      <div className="border-b border-line bg-surface-3">
-        <div className="contenedor flex flex-wrap items-center gap-x-6 py-2.5">
-        {CONTEXTO.map(([rotulo, valor]) => (
-          <div key={rotulo} className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-sm text-ink-3">
-              {rotulo}
-            </span>
-            <span className="text-sm font-semibold text-ink">{valor}</span>
-          </div>
-        ))}
-        </div>
-      </div>
-
       <div className="contenedor flex flex-1 flex-col gap-4 py-5">
         <Panel titulo="Datos de la orden" icono={LuFileText}>
-          <div className="grid grid-cols-1 gap-4 gap-x-5 md:grid-cols-2 xl:grid-cols-3">
-            <Field label="N° de documento" required>
+          <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+            {campo('Cliente', 'cliente', CLIENTES)}
+            {campo('Proveedor', 'proveedor', PROVEEDORES, {
+              required: true,
+              placeholder: 'Selecciona un proveedor…',
+            })}
+            {campo('Organización', 'organizacion', ORGANIZACIONES)}
+            {campo('Centro', 'centro', CENTROS)}
+            {campo('Área de compra', 'areaCompra', AREAS_COMPRA)}
+            {campo('Resp. compra', 'resp', RESPONSABLES_OC)}
+            <Field label="N° de documento" required className="gap-1">
               <Input
+                className={COMPACTO}
                 placeholder="No. Orden Compra"
                 value={form.documento}
                 onChange={set('documento')}
               />
             </Field>
-            <Field label="Proveedor" required>
-              <Select
-                placeholder="Selecciona un proveedor…"
-                options={PROVEEDORES}
-                value={form.proveedor}
-                onChange={set('proveedor')}
+            {campo('Incoterms', 'incoterm', INCOTERMS)}
+            {campo('Cond. de pago', 'condPago', COND_PAGO)}
+            <Field label="Fecha de documento" className="gap-1">
+              <Input
+                className={COMPACTO}
+                date
+                type="date"
+                value={form.fechaDoc}
+                onChange={set('fechaDoc')}
               />
             </Field>
-            <Field label="Incoterms">
-              <Select
-                placeholder="Seleccione…"
-                options={INCOTERMS}
-                value={form.incoterm}
-                onChange={set('incoterm')}
-              />
-            </Field>
-
-            <Field label="Fecha de documento">
-              <Input date type="date" value={form.fechaDoc} onChange={set('fechaDoc')} />
-            </Field>
-            <Field label="Fecha correo">
-              <Input date type="datetime-local" value={form.fechaCorreo} onChange={set('fechaCorreo')} />
-            </Field>
-            <Field label="Cond. de pago">
-              <Select
-                placeholder="Seleccione…"
-                options={COND_PAGO}
-                value={form.condPago}
-                onChange={set('condPago')}
-              />
-            </Field>
-
-            {/* <Field label="Instrucciones especiales" className="md:col-span-2">
-              <Textarea
-                placeholder="Ingrese alguna observación para el proveedor…"
-                value={form.instrucciones}
-                onChange={set('instrucciones')}
-              />
-            </Field>
-            <Field label="Nota interna" hint="No se comparte con el proveedor.">
-              <Textarea value={form.nota} onChange={set('nota')} />
-            </Field> */}
-          </div>
-        </Panel>
-
-        <Panel titulo="Clasificación de SKU" icono={LuTags} sub="Se crean en Personas y en el Portal.">
-          <div className="grid grid-cols-1 gap-4 gap-x-5 md:grid-cols-2 xl:grid-cols-3">
-            <Field label="Categoría del portal">
-              <Select
-                placeholder="Seleccione…"
-                options={CATEGORIAS_PORTAL}
-                value={form.categoriaPortal}
-                onChange={set('categoriaPortal')}
-              />
-            </Field>
-            <Field label="Categoría del SKU">
-              <Select
-                placeholder="Selecciona una categoría…"
-                options={CATEGORIAS_SKU}
-                value={form.categoriaSku}
-                onChange={set('categoriaSku')}
-              />
-            </Field>
-            <Field label="Tipo de embalaje">
-              <Select
-                placeholder="Seleccione…"
-                options={TIPOS_EMBALAJE}
-                value={form.embalaje}
-                onChange={set('embalaje')}
+            <Field label="Fecha correo" className="gap-1">
+              <Input
+                className={COMPACTO}
+                date
+                type="datetime-local"
+                value={form.fechaCorreo}
+                onChange={set('fechaCorreo')}
               />
             </Field>
           </div>
@@ -272,6 +236,25 @@ export default function OrdenCompra() {
               <LuPlus size={14} />
               Agregar material
             </Button>
+
+            {/* Clasificación de SKU: en línea con la barra, etiqueta a la izquierda para no sumar altura. */}
+            <span className="hidden h-5 w-px bg-line-strong lg:block" />
+            {[
+              ['Categoría SKU`s', 'categoriaSku', CATEGORIAS_SKU, 'Selecciona una categoría…'],
+              ['Tipo de embalaje', 'embalaje', TIPOS_EMBALAJE, 'Seleccione…'],
+            ].map(([label, nombre, options, placeholder]) => (
+              <label key={nombre} className="flex items-center gap-2">
+                <span className="lbl whitespace-nowrap">{label}</span>
+                <span className="w-[190px]">
+                  <Select
+                    placeholder={placeholder}
+                    options={options}
+                    value={form[nombre]}
+                    onChange={set(nombre)}
+                  />
+                </span>
+              </label>
+            ))}
           </div>
 
           <div className="tabla-scroll max-w-full">
